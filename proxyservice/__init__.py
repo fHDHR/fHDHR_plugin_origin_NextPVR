@@ -126,7 +126,12 @@ class proxyserviceFetcher():
         for c in channel_o_list:
             dString = json.dumps(c)
             channel_dict = eval(dString)
-            channel_list.append(channel_dict)
+            clean_station_item = {
+                                 "name": channel_dict["name"],
+                                 "number": channel_dict["formatted-number"],
+                                 "id": channel_dict["id"],
+                                 }
+            channel_list.append(clean_station_item)
         return channel_list
 
     def get_station_list(self, base_url):
@@ -141,11 +146,11 @@ class proxyserviceFetcher():
                    ("http://",
                     base_url,
                     watchtype,
-                    c['formatted-number']
+                    c['number']
                     ))
             station_list.append(
                                 {
-                                 'GuideNumber': str(c['formatted-number']),
+                                 'GuideNumber': str(c['number']),
                                  'GuideName': c['name'],
                                  'URL': url
                                 })
@@ -164,10 +169,10 @@ class proxyserviceFetcher():
                    ("https://" if self.config["nextpvr"]["ssl"] else "http://",
                     self.config["nextpvr"]["address"],
                     str(self.config["nextpvr"]["port"]),
-                    str(c["formatted-number"]),
-                    str(c["formatted-number"]),
+                    str(c["number"]),
+                    str(c["number"]),
                     ))
-            streamdict[str(c["formatted-number"])] = url
+            streamdict[str(c["number"])] = url
         return streamdict
 
     def get_channel_thumbnail(self, channel_id):
@@ -197,26 +202,26 @@ class proxyserviceFetcher():
         programguide = {}
 
         for c in self.get_channels():
-            if str(c["formatted-number"]) not in list(programguide.keys()):
-                programguide[str(c["formatted-number"])] = {}
+            if str(c["number"]) not in list(programguide.keys()):
+                programguide[str(c["number"])] = {}
 
             channel_thumb_path = ("/images?source=proxy&type=channel&id=%s" % (str(c['id'])))
-            programguide[str(c["formatted-number"])]["thumbnail"] = channel_thumb_path
+            programguide[str(c["number"])]["thumbnail"] = channel_thumb_path
 
-            if "name" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["name"] = c["name"]
+            if "name" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["name"] = c["name"]
 
-            if "callsign" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["callsign"] = c["name"]
+            if "callsign" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["callsign"] = c["name"]
 
-            if "id" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["id"] = c["id"]
+            if "id" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["id"] = c["id"]
 
-            if "number" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["number"] = c["formatted-number"]
+            if "number" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["number"] = c["number"]
 
-            if "listing" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["listing"] = []
+            if "listing" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["listing"] = []
 
             epg_url = ('%s%s:%s/service?method=channel.listings&channel_id=%s' %
                        ("https://" if self.config["nextpvr"]["ssl"] else "http://",
@@ -283,7 +288,7 @@ class proxyserviceFetcher():
 
                         # TODO isNEW
 
-                        programguide[str(c["formatted-number"])]["listing"].append(clean_prog_dict)
+                        programguide[str(c["number"])]["listing"].append(clean_prog_dict)
 
         self.epg_cache = programguide
         with open(self.epg_cache_file, 'w') as epgfile:
