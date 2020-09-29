@@ -172,26 +172,26 @@ class EPGhandler():
                 timestamps.append(timestampdict)
 
         for c in self.serviceproxy.get_channels():
-            if str(c["formatted-number"]) not in list(programguide.keys()):
-                programguide[str(c["formatted-number"])] = {}
+            if str(c["number"]) not in list(programguide.keys()):
+                programguide[str(c["number"])] = {}
 
-            channel_thumb_path = ("/images?source=empty&type=channel&id=%s" % (str(c['formatted-number'])))
-            programguide[str(c["formatted-number"])]["thumbnail"] = channel_thumb_path
+            channel_thumb_path = ("/images?source=empty&type=channel&id=%s" % (str(c['number'])))
+            programguide[str(c["number"])]["thumbnail"] = channel_thumb_path
 
-            if "name" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["name"] = c["name"]
+            if "name" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["name"] = c["name"]
 
-            if "callsign" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["callsign"] = c["name"]
+            if "callsign" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["callsign"] = c["name"]
 
-            if "id" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["id"] = c["id"]
+            if "id" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["id"] = c["id"]
 
-            if "number" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["number"] = c["formatted-number"]
+            if "number" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["number"] = c["number"]
 
-            if "listing" not in list(programguide[str(c["formatted-number"])].keys()):
-                programguide[str(c["formatted-number"])]["listing"] = []
+            if "listing" not in list(programguide[str(c["number"])].keys()):
+                programguide[str(c["number"])]["listing"] = []
 
             for timestamp in timestamps:
                 clean_prog_dict = {}
@@ -200,7 +200,7 @@ class EPGhandler():
                 clean_prog_dict["time_end"] = timestamp['time_end']
                 clean_prog_dict["duration_minutes"] = 60.0
 
-                content_thumb = ("/images?source=empty&type=content&id=%s" % (str(c['formatted-number'])))
+                content_thumb = ("/images?source=empty&type=content&id=%s" % (str(c['number'])))
                 clean_prog_dict["thumbnail"] = content_thumb
 
                 clean_prog_dict["title"] = "Unavailable"
@@ -216,7 +216,7 @@ class EPGhandler():
 
                 clean_prog_dict['rating'] = "N/A"
 
-                programguide[str(c["formatted-number"])]["listing"].append(clean_prog_dict)
+                programguide[str(c["number"])]["listing"].append(clean_prog_dict)
 
         self.epg_cache = programguide
         with open(self.empty_cache_file, 'w') as epgfile:

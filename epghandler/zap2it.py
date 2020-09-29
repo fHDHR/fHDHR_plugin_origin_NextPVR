@@ -23,9 +23,8 @@ class ZapEPG():
     def __init__(self, config):
 
         self.config = config.config
-        self.postalcode = config.config["zap2xml"]["postalcode"]
-        if not self.postalcode:
-            self.postalcode = self.get_location()
+
+        self.postalcode = None
 
         self.epg_cache = None
         self.cache_dir = config.config["main"]["zap_web_cache"]
@@ -33,10 +32,12 @@ class ZapEPG():
         self.epg_cache = self.epg_cache_open()
 
     def get_location(self):
-        url = 'http://ipinfo.io/json'
-        response = urllib.request.urlopen(url)
-        data = json.load(response)
-        return data["postal"]
+        self.postalcode = self.config["zap2xml"]["postalcode"]
+        if self.postalcode:
+            url = 'http://ipinfo.io/json'
+            response = urllib.request.urlopen(url)
+            data = json.load(response)
+            return data["postal"]
 
     def epg_cache_open(self):
         epg_cache = None
@@ -87,6 +88,8 @@ class ZapEPG():
         print('Updating Zap2it EPG cache file.')
         programguide = {}
 
+        self.get_location()
+
         # Start time parameter is now rounded down to nearest `zap_timespan`, in s.
         zap_time = time.mktime(time.localtime())
         zap_time_window = int(self.config["zap2xml"]["timespan"]) * 3600
@@ -107,7 +110,7 @@ class ZapEPG():
                 'timespan': self.config["zap2xml"]['timespan'],
                 'timezone': self.config["zap2xml"]['timezone'],
                 'userId': self.config["zap2xml"]['userid'],
-                'postalCode': self.config["zap2xml"]['postalcode'],
+                'postalCode': self.postalcode,
                 'lineupId': '%s-%s-DEFAULT' % (self.config["zap2xml"]['country'], self.config["zap2xml"]['device']),
                 'time': i_time,
                 'Activity_ID': 1,
