@@ -8,6 +8,24 @@ import urllib.parse
 import urllib.request
 
 
+def xmldictmaker(inputdict, req_items, list_items=[], str_items=[]):
+    xml_dict = {}
+
+    for origitem in list(inputdict.keys()):
+        xml_dict[origitem] = inputdict[origitem]
+
+    for req_item in req_items:
+        if req_item not in list(inputdict.keys()):
+            xml_dict[req_item] = None
+        if not xml_dict[req_item]:
+            if req_item in list_items:
+                xml_dict[req_item] = []
+            elif req_item in str_items:
+                xml_dict[req_item] = ""
+
+    return xml_dict
+
+
 class NextPVR_Auth():
     config = {
             'npvrURL': '',
@@ -128,6 +146,7 @@ class proxyserviceFetcher():
             channel_dict = eval(dString)
             clean_station_item = {
                                  "name": channel_dict["name"],
+                                 "callsign": channel_dict["name"],
                                  "number": channel_dict["formatted-number"],
                                  "id": channel_dict["id"],
                                  }
@@ -202,32 +221,25 @@ class proxyserviceFetcher():
         programguide = {}
 
         for c in self.get_channels():
-            if str(c["number"]) not in list(programguide.keys()):
-                programguide[str(c["number"])] = {}
 
-            channel_thumb_path = ("/images?source=proxy&type=channel&id=%s" % (str(c['id'])))
-            programguide[str(c["number"])]["thumbnail"] = channel_thumb_path
+            cdict = xmldictmaker(c, ["callsign", "name", "number", "id"])
 
-            if "name" not in list(programguide[str(c["number"])].keys()):
-                programguide[str(c["number"])]["name"] = c["name"]
+            if str(cdict['number']) not in list(programguide.keys()):
 
-            if "callsign" not in list(programguide[str(c["number"])].keys()):
-                programguide[str(c["number"])]["callsign"] = c["name"]
-
-            if "id" not in list(programguide[str(c["number"])].keys()):
-                programguide[str(c["number"])]["id"] = c["id"]
-
-            if "number" not in list(programguide[str(c["number"])].keys()):
-                programguide[str(c["number"])]["number"] = c["number"]
-
-            if "listing" not in list(programguide[str(c["number"])].keys()):
-                programguide[str(c["number"])]["listing"] = []
+                programguide[str(cdict['number'])] = {
+                                                    "callsign": cdict["callsign"],
+                                                    "name": cdict["name"] or cdict["callsign"],
+                                                    "number": cdict["number"],
+                                                    "id": cdict["id"],
+                                                    "thumbnail": ("/images?source=proxy&type=channel&id=%s" % (str(cdict['id']))),
+                                                    "listing": [],
+                                                    }
 
             epg_url = ('%s%s:%s/service?method=channel.listings&channel_id=%s' %
                        ("https://" if self.config["nextpvr"]["ssl"] else "http://",
                         self.config["nextpvr"]["address"],
                         str(self.config["nextpvr"]["port"]),
-                        str(c["id"]),
+                        str(cdict["id"]),
                         ))
             epg_req = urllib.request.urlopen(epg_url)
             epg_dict = xmltodict.parse(epg_req)
@@ -235,60 +247,38 @@ class proxyserviceFetcher():
             for program_listing in epg_dict["rsp"]["listings"]:
                 for program_item in epg_dict["rsp"]["listings"][program_listing]:
                     if not isinstance(program_item, str):
-                        dirty_prog_dict = {}
-                        for programkey in list(program_item.keys()):
-                            dirty_prog_dict[programkey] = program_item[programkey]
 
-                        clean_prog_dict = {}
+                        progdict = xmldictmaker(program_item, ["start", "end", "title", "name", "subtitle", "rating", "description", "season", "episode", "id", "episodeTitle"])
 
-                        clean_prog_dict["time_start"] = xmltimestamp_nextpvr(dirty_prog_dict["start"])
-                        clean_prog_dict["time_end"] = xmltimestamp_nextpvr(dirty_prog_dict["end"])
-                        clean_prog_dict["duration_minutes"] = duration_nextpvr_minutes(dirty_prog_dict["start"], dirty_prog_dict["end"])
+                        clean_prog_dict = {
+                                            "time_start": xmltimestamp_nextpvr(progdict["start"]),
+                                            "time_end": xmltimestamp_nextpvr(progdict["end"]),
+                                            "duration_minutes": duration_nextpvr_minutes(progdict["start"], progdict["end"]),
+                                            "thumbnail": ("/images?source=proxy&type=content&id=%s" % (str(progdict['id']))),
+                                            "title": progdict['name'] or "Unavailable",
+                                            "sub-title": progdict['subtitle'] or "Unavailable",
+                                            "description": progdict['description'] or "Unavailable",
+                                            "rating": progdict['rating'] or "N/A",
+                                            "episodetitle": progdict['episodeTitle'],
+                                            "releaseyear": None,
+                                            "genres": [],
+                                            "seasonnumber": progdict['season'],
+                                            "episodenumber": progdict['episode'],
+                                            "isnew": False,
+                                            "id": progdict['id'] or xmltimestamp_nextpvr(progdict["start"]),
+                                            }
 
-                        item_thumb_path = ("/images?source=proxy&type=content&id=%s" % (str(dirty_prog_dict['id'])))
-                        clean_prog_dict["thumbnail"] = item_thumb_path
+                        if 'genre' in list(progdict.keys()):
+                            clean_prog_dict["genres"] = progdict['genre'].split(",")
 
-                        if 'name' not in list(dirty_prog_dict.keys()):
-                            dirty_prog_dict["name"] = "Unavailable"
-                        elif not dirty_prog_dict["name"]:
-                            dirty_prog_dict["name"] = "Unavailable"
-                        clean_prog_dict["title"] = dirty_prog_dict["name"]
-
-                        if 'genre' not in list(dirty_prog_dict.keys()):
-                            clean_prog_dict["genres"] = []
-                        else:
-                            clean_prog_dict["genres"] = dirty_prog_dict['genre'].split(",")
-
-                        if 'subtitle' not in list(dirty_prog_dict.keys()):
-                            dirty_prog_dict["subtitle"] = "Unavailable"
-                        clean_prog_dict["sub-title"] = dirty_prog_dict["subtitle"]
-
-                        if dirty_prog_dict['subtitle'].startswith("Movie:"):
-                            clean_prog_dict['releaseyear'] = dirty_prog_dict['subtitle'].split("Movie:")[-1]
-                        else:
-                            clean_prog_dict['releaseyear'] = None
-
-                        if 'description' not in list(dirty_prog_dict.keys()):
-                            dirty_prog_dict["description"] = "Unavailable"
-                        elif dirty_prog_dict['description']:
-                            dirty_prog_dict["description"] = "Unavailable"
-                        clean_prog_dict["description"] = dirty_prog_dict["description"]
-
-                        if 'rating' not in list(dirty_prog_dict.keys()):
-                            dirty_prog_dict['rating'] = "N/A"
-                        clean_prog_dict['rating'] = dirty_prog_dict['rating']
-
-                        if 'season' in list(dirty_prog_dict.keys()) and 'episode' in list(dirty_prog_dict.keys()):
-                            clean_prog_dict["seasonnumber"] = dirty_prog_dict['season']
-                            clean_prog_dict["episodenumber"] = dirty_prog_dict['episode']
-                            clean_prog_dict["episodetitle"] = clean_prog_dict["sub-title"]
-                        else:
-                            if "movie" not in clean_prog_dict["genres"]:
-                                clean_prog_dict["episodetitle"] = clean_prog_dict["sub-title"]
+                        if clean_prog_dict['sub-title'].startswith("Movie:"):
+                            clean_prog_dict['releaseyear'] = clean_prog_dict['sub-title'].split("Movie: ")[-1]
+                            clean_prog_dict['sub-title'] = "Unavailable"
+                            clean_prog_dict["genres"].append("Movie")
 
                         # TODO isNEW
 
-                        programguide[str(c["number"])]["listing"].append(clean_prog_dict)
+                        programguide[str(cdict["number"])]["listing"].append(clean_prog_dict)
 
         self.epg_cache = programguide
         with open(self.epg_cache_file, 'w') as epgfile:
