@@ -251,8 +251,7 @@ class HDHR_HTTP_Server():
         if 'method' in list(request.args.keys()):
             if 'channel' in list(request.args.keys()):
 
-                station_list = hdhr.serviceproxy.get_channel_streams()
-                channelUri = station_list[str(request.args["channel"])]
+                channelUri = hdhr.serviceproxy.get_channel_stream(str(request.args["channel"]))
                 if not channelUri:
                     abort(404)
 
