@@ -181,6 +181,16 @@ class proxyserviceFetcher():
             total_channels += 1
         return total_channels
 
+    def get_channel_stream(self, id):
+        url = ('%s%s:%s/live?channel=%s&client=%s' %
+               ("https://" if self.config["nextpvr"]["ssl"] else "http://",
+                self.config["nextpvr"]["address"],
+                str(self.config["nextpvr"]["port"]),
+                str(id),
+                str(id),
+                ))
+        return url
+
     def get_channel_streams(self):
         streamdict = {}
         for c in self.get_channels():
