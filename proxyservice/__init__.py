@@ -35,12 +35,12 @@ class NextPVR_Auth():
     sidfile = None
 
     def __init__(self, config):
-        self.sidfile = config.config["nextpvr"]["sidfile"]
-        self.config["npvrPIN"] = config.config["nextpvr"]["pin"]
+        self.sidfile = config.config["proxy"]["sidfile"]
+        self.config["npvrPIN"] = config.config["proxy"]["pin"]
         self.config["npvrURL"] = ('%s%s:%s' %
-                                  ("https://" if config.config["nextpvr"]["ssl"] else "http://",
-                                   config.config["nextpvr"]["address"],
-                                   str(config.config["nextpvr"]["port"]),
+                                  ("https://" if config.config["proxy"]["ssl"] else "http://",
+                                   config.config["proxy"]["address"],
+                                   str(config.config["proxy"]["port"]),
                                    ))
 
     def _check_sid(self):
@@ -100,7 +100,7 @@ class proxyserviceFetcher():
         self.config = config.config
 
         self.epg_cache = None
-        self.epg_cache_file = config.config["nextpvr"]["epg_cache"]
+        self.epg_cache_file = config.config["proxy"]["epg_cache"]
 
         self.servicename = "NextPVRProxy"
 
@@ -118,6 +118,12 @@ class proxyserviceFetcher():
                 epg_cache = json.load(epgfile)
         return epg_cache
 
+    def thumb_url(self, thumb_type, base_url, thumbnail):
+        if thumb_type == "channel":
+            return "http://" + str(base_url) + str(thumbnail)
+        elif thumb_type == "content":
+            return "http://" + str(base_url) + str(thumbnail)
+
     def url_assembler(self):
         pass
 
@@ -125,9 +131,9 @@ class proxyserviceFetcher():
         self.auth._check_sid()
 
         url = ('%s%s:%s/service?method=channel.list&sid=%s' %
-               ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                self.config["nextpvr"]["address"],
-                str(self.config["nextpvr"]["port"]),
+               ("https://" if self.config["proxy"]["ssl"] else "http://",
+                self.config["proxy"]["address"],
+                str(self.config["proxy"]["port"]),
                 self.auth.config['sid']
                 ))
 
@@ -183,9 +189,9 @@ class proxyserviceFetcher():
 
     def get_channel_stream(self, id):
         url = ('%s%s:%s/live?channel=%s&client=%s' %
-               ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                self.config["nextpvr"]["address"],
-                str(self.config["nextpvr"]["port"]),
+               ("https://" if self.config["proxy"]["ssl"] else "http://",
+                self.config["proxy"]["address"],
+                str(self.config["proxy"]["port"]),
                 str(id),
                 str(id),
                 ))
@@ -195,9 +201,9 @@ class proxyserviceFetcher():
         streamdict = {}
         for c in self.get_channels():
             url = ('%s%s:%s/live?channel=%s&client=%s' %
-                   ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                    self.config["nextpvr"]["address"],
-                    str(self.config["nextpvr"]["port"]),
+                   ("https://" if self.config["proxy"]["ssl"] else "http://",
+                    self.config["proxy"]["address"],
+                    str(self.config["proxy"]["port"]),
                     str(c["number"]),
                     str(c["number"]),
                     ))
@@ -206,9 +212,9 @@ class proxyserviceFetcher():
 
     def get_channel_thumbnail(self, channel_id):
         channel_thumb_url = ("%s%s:%s/service?method=channel.icon&channel_id=%s" %
-                             ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                              self.config["nextpvr"]["address"],
-                              str(self.config["nextpvr"]["port"]),
+                             ("https://" if self.config["proxy"]["ssl"] else "http://",
+                              self.config["proxy"]["address"],
+                              str(self.config["proxy"]["port"]),
                               str(channel_id)
                               ))
         return channel_thumb_url
@@ -216,9 +222,9 @@ class proxyserviceFetcher():
     def get_content_thumbnail(self, content_id):
         self.auth._check_sid()
         item_thumb_url = ("%s%s:%s/service?method=channel.show.artwork&sid=%s&event_id=%s" %
-                          ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                           self.config["nextpvr"]["address"],
-                           str(self.config["nextpvr"]["port"]),
+                          ("https://" if self.config["proxy"]["ssl"] else "http://",
+                           self.config["proxy"]["address"],
+                           str(self.config["proxy"]["port"]),
                            self.auth.config['sid'],
                            str(content_id)
                            ))
@@ -246,9 +252,9 @@ class proxyserviceFetcher():
                                                     }
 
             epg_url = ('%s%s:%s/service?method=channel.listings&channel_id=%s' %
-                       ("https://" if self.config["nextpvr"]["ssl"] else "http://",
-                        self.config["nextpvr"]["address"],
-                        str(self.config["nextpvr"]["port"]),
+                       ("https://" if self.config["proxy"]["ssl"] else "http://",
+                        self.config["proxy"]["address"],
+                        str(self.config["proxy"]["port"]),
                         str(cdict["id"]),
                         ))
             epg_req = urllib.request.urlopen(epg_url)
