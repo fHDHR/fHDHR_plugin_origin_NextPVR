@@ -102,8 +102,6 @@ class proxyserviceFetcher():
         self.epg_cache = None
         self.epg_cache_file = config.config["proxy"]["epg_cache"]
 
-        self.servicename = "NextPVRProxy"
-
         self.urls = {}
         self.url_assembler()
 
