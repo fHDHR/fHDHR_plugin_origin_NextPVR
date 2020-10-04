@@ -35,12 +35,12 @@ class NextPVR_Auth():
     sidfile = None
 
     def __init__(self, config):
-        self.sidfile = config.config["proxy"]["sidfile"]
-        self.config["npvrPIN"] = config.config["proxy"]["pin"]
+        self.sidfile = config["proxy"]["sidfile"]
+        self.config["npvrPIN"] = config["proxy"]["pin"]
         self.config["npvrURL"] = ('%s%s:%s' %
-                                  ("https://" if config.config["proxy"]["ssl"] else "http://",
-                                   config.config["proxy"]["address"],
-                                   str(config.config["proxy"]["port"]),
+                                  ("https://" if config["proxy"]["ssl"] else "http://",
+                                   config["proxy"]["address"],
+                                   str(config["proxy"]["port"]),
                                    ))
 
     def _check_sid(self):
@@ -97,10 +97,10 @@ def duration_nextpvr_minutes(starttime, endtime):
 class proxyserviceFetcher():
 
     def __init__(self, config):
-        self.config = config.config
+        self.config = config.copy()
 
         self.epg_cache = None
-        self.epg_cache_file = config.config["proxy"]["epg_cache"]
+        self.epg_cache_file = self.config["proxy"]["epg_cache"]
 
         self.urls = {}
         self.url_assembler()
