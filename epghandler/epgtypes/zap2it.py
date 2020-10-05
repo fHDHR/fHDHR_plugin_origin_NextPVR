@@ -117,6 +117,8 @@ class ZapEPG():
         zap_time_window = int(self.config["zap2it"]["timespan"]) * 3600
         zap_time = int(zap_time - (zap_time % zap_time_window))
 
+        self.remove_stale_cache(zap_time)
+
         # Fetch data in `zap_timespan` chunks.
         for i in range(int(7 * 24 / int(self.config["zap2it"]["timespan"]))):
             i_time = zap_time + (i * zap_time_window)
