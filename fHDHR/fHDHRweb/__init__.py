@@ -4,7 +4,6 @@ from flask import (Flask, send_from_directory, request, Response,
 from io import BytesIO
 import xml.etree.ElementTree as ET
 import json
-import time
 import requests
 import subprocess
 import threading
@@ -28,7 +27,7 @@ def getSize(txt, font):
 
 class HDHR_Hub():
     config = None
-    serviceproxy = None
+    origserv = None
     epghandling = None
     station_scan = False
     station_list = []
@@ -38,11 +37,11 @@ class HDHR_Hub():
         self.tuner_lock = threading.Lock()
         self.tuners = 0
 
-    def hubprep(self, config, serviceproxy, epghandling):
+    def hubprep(self, config, origserv, epghandling):
         self.config = config
-        self.max_tuners = int(self.config["fakehdhr"]["tuner_count"])
+        self.max_tuners = int(self.config.dict["fhdhr"]["tuner_count"])
         self.station_scan = False
-        self.serviceproxy = serviceproxy
+        self.origserv = origserv
         self.epghandling = epghandling
 
     def tuner_usage(self, number):
@@ -62,45 +61,55 @@ class HDHR_Hub():
     def get_xmltv(self, base_url):
         return self.epghandling.get_xmltv(base_url)
 
+    def generate_image(self, messagetype, message):
+        if messagetype == "channel":
+            width = 360
+            height = 270
+            fontsize = 72
+        elif messagetype == "content":
+            width = 1080
+            height = 1440
+            fontsize = 100
+
+        colorBackground = "#228822"
+        colorText = "#717D7E"
+        colorOutline = "#717D7E"
+        fontname = str(self.config.dict["filedir"]["font"])
+
+        font = PIL.ImageFont.truetype(fontname, fontsize)
+        text_width, text_height = getSize(message, font)
+        img = PIL.Image.new('RGBA', (width+4, height+4), colorBackground)
+        d = PIL.ImageDraw.Draw(img)
+        d.text(((width-text_width)/2, (height-text_height)/2), message, fill=colorText, font=font)
+        d.rectangle((0, 0, width+3, height+3), outline=colorOutline)
+
+        s = BytesIO()
+        img.save(s, 'png')
+        return s.getvalue()
+
     def get_image(self, req_args):
 
-        imageid = req_args["id"]
+        imageUri = self.epghandling.get_thumbnail(req_args["type"], req_args["id"])
+        if not imageUri:
+            return self.generate_image(req_args["type"], req_args["id"])
 
-        if req_args["source"] == "proxy":
-            if req_args["type"] == "channel":
-                imageUri = self.serviceproxy.get_channel_thumbnail(imageid)
-            elif req_args["type"] == "content":
-                imageUri = self.serviceproxy.get_content_thumbnail(imageid)
+        try:
             req = requests.get(imageUri)
             return req.content
+        except Exception as e:
+            print(e)
+            return self.generate_image(req_args["type"], req_args["id"])
 
-        elif req_args["source"] == "empty":
-            if req_args["type"] == "channel":
-                width = 360
-                height = 270
-                text = req_args["id"]
-                fontsize = 72
-            elif req_args["type"] == "content":
-                width = 1080
-                height = 1440
-                fontsize = 100
-                text = req_args["id"]
-
-            colorBackground = "#228822"
-            colorText = "#717D7E"
-            colorOutline = "#717D7E"
-            fontname = str(self.config["fakehdhr"]["font"])
-
-            font = PIL.ImageFont.truetype(fontname, fontsize)
-            text_width, text_height = getSize(text, font)
-            img = PIL.Image.new('RGBA', (width+4, height+4), colorBackground)
-            d = PIL.ImageDraw.Draw(img)
-            d.text(((width-text_width)/2, (height-text_height)/2), text, fill=colorText, font=font)
-            d.rectangle((0, 0, width+3, height+3), outline=colorOutline)
-
-            s = BytesIO()
-            img.save(s, 'png')
-            return s.getvalue()
+    def get_image_type(self, image_data):
+        header_byte = image_data[0:3].hex().lower()
+        if header_byte == '474946':
+            return "image/gif"
+        elif header_byte == '89504e':
+            return "image/png"
+        elif header_byte == 'ffd8ff':
+            return "image/jpeg"
+        else:
+            return "image/jpeg"
 
     def get_xmldiscover(self, base_url):
         out = ET.Element('root')
@@ -114,12 +123,12 @@ class HDHR_Hub():
 
         device_out = sub_el(out, 'device')
         sub_el(device_out, 'deviceType', "urn:schemas-upnp-org:device:MediaServer:1")
-        sub_el(device_out, 'friendlyName', self.config["fakehdhr"]["friendlyname"])
-        sub_el(device_out, 'manufacturer', "Silicondust")
-        sub_el(device_out, 'modelName', self.config["dev"]["reporting_model"])
-        sub_el(device_out, 'modelNumber', self.config["dev"]["reporting_model"])
+        sub_el(device_out, 'friendlyName', self.config.dict["fhdhr"]["friendlyname"])
+        sub_el(device_out, 'manufacturer', self.config.dict["dev"]["reporting_manufacturer"])
+        sub_el(device_out, 'modelName', self.config.dict["dev"]["reporting_model"])
+        sub_el(device_out, 'modelNumber', self.config.dict["dev"]["reporting_model"])
         sub_el(device_out, 'serialNumber')
-        sub_el(device_out, 'UDN', "uuid:" + self.config["main"]["uuid"])
+        sub_el(device_out, 'UDN', "uuid:" + self.config.dict["main"]["uuid"])
 
         fakefile = BytesIO()
         fakefile.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -128,13 +137,13 @@ class HDHR_Hub():
 
     def get_discover_json(self, base_url):
         jsondiscover = {
-                            "FriendlyName": self.config["fakehdhr"]["friendlyname"],
-                            "Manufacturer": "Silicondust",
-                            "ModelNumber": self.config["dev"]["reporting_model"],
-                            "FirmwareName": self.config["dev"]["reporting_firmware_name"],
-                            "TunerCount": self.config["fakehdhr"]["tuner_count"],
-                            "FirmwareVersion": self.config["dev"]["reporting_firmware_ver"],
-                            "DeviceID": self.config["main"]["uuid"],
+                            "FriendlyName": self.config.dict["fhdhr"]["friendlyname"],
+                            "Manufacturer": "Borondust",
+                            "ModelNumber": self.config.dict["dev"]["reporting_model"],
+                            "FirmwareName": self.config.dict["dev"]["reporting_firmware_name"],
+                            "TunerCount": self.config.dict["fhdhr"]["tuner_count"],
+                            "FirmwareVersion": self.config.dict["dev"]["reporting_firmware_ver"],
+                            "DeviceID": self.config.dict["main"]["uuid"],
                             "DeviceAuth": "fHDHR",
                             "BaseURL": "http://" + base_url,
                             "LineupURL": "http://" + base_url + "/lineup.json"
@@ -143,7 +152,7 @@ class HDHR_Hub():
 
     def get_lineup_status(self):
         if self.station_scan:
-            channel_count = self.serviceproxy.get_station_total()
+            channel_count = self.origserv.get_station_total()
             jsonlineup = {
                           "ScanInProgress": "true",
                           "Progress": 99,
@@ -153,14 +162,14 @@ class HDHR_Hub():
             jsonlineup = {
                           "ScanInProgress": "false",
                           "ScanPossible": "true",
-                          "Source": self.config["dev"]["reporting_tuner_type"],
-                          "SourceList": [self.config["dev"]["reporting_tuner_type"]],
+                          "Source": self.config.dict["dev"]["reporting_tuner_type"],
+                          "SourceList": [self.config.dict["dev"]["reporting_tuner_type"]],
                           }
         return jsonlineup
 
     def get_lineup_xml(self, base_url):
         out = ET.Element('Lineup')
-        station_list = self.serviceproxy.get_station_list(base_url)
+        station_list = self.origserv.get_station_list(base_url)
         for station_item in station_list:
             program_out = sub_el(out, 'Program')
             sub_el(program_out, 'GuideNumber', station_item['GuideNumber'])
@@ -199,11 +208,11 @@ class HDHR_HTTP_Server():
 
     @app.route('/')
     def root_path():
-        return hdhr.config["fakehdhr"]["friendlyname"]
+        return hdhr.config.dict["fhdhr"]["friendlyname"]
 
     @app.route('/favicon.ico', methods=['GET'])
     def favicon():
-        return send_from_directory(hdhr.config["main"]["www_dir"],
+        return send_from_directory(hdhr.config.dict["filedir"]["www_dir"],
                                    'favicon.ico',
                                    mimetype='image/vnd.microsoft.icon')
 
@@ -241,7 +250,7 @@ class HDHR_HTTP_Server():
     @app.route('/lineup.json', methods=['GET'])
     def lineup_json():
         base_url = request.headers["host"]
-        station_list = hdhr.serviceproxy.get_station_list(base_url)
+        station_list = hdhr.origserv.get_station_list(base_url)
         return Response(status=200,
                         response=json.dumps(station_list, indent=4),
                         mimetype='application/json')
@@ -263,12 +272,36 @@ class HDHR_HTTP_Server():
                         mimetype='application/json')
 
     @app.route('/images', methods=['GET'])
-    def images_nothing():
-        if ('source' not in list(request.args.keys()) or 'id' not in list(request.args.keys()) or 'type' not in list(request.args.keys())):
-            abort(404)
+    def images():
 
-        image = hdhr.get_image(request.args)
-        return Response(image, content_type='image/png', direct_passthrough=True)
+        if 'source' not in list(request.args.keys()):
+            image = hdhr.generate_image("content", "Unknown Request")
+        else:
+
+            itemtype = 'content'
+            if 'type' in list(request.args.keys()):
+                itemtype = request.args["type"]
+
+            if request.args['source'] == 'epg':
+                if 'id' in list(request.args.keys()):
+                    req_dict = {
+                                "source": request.args["source"],
+                                "type": request.args["type"],
+                                "id": request.args["id"],
+                                }
+                    image = hdhr.get_image(req_dict)
+                else:
+                    itemmessage = "Unknown Request"
+                    image = hdhr.generate_image(itemtype, itemmessage)
+            elif request.args['source'] == 'generate':
+                itemmessage = "Unknown Request"
+                if 'message' in list(request.args.keys()):
+                    itemmessage = request.args["message"]
+                image = hdhr.generate_image(itemtype, itemmessage)
+            else:
+                itemmessage = "Unknown Request"
+                image = hdhr.generate_image(itemtype, itemmessage)
+        return Response(image, content_type=hdhr.get_image_type(image), direct_passthrough=True)
 
     @app.route('/watch', methods=['GET'])
     def watch():
@@ -280,27 +313,24 @@ class HDHR_HTTP_Server():
 
             tuner = hdhr.get_tuner()
             if not tuner:
+                print("A " + method + " stream request for channel " +
+                      str(channel_id) + " was rejected do to a lack of available tuners.")
                 abort(503)
 
-            channelUri = hdhr.serviceproxy.get_channel_stream(channel_id)
+            print("Attempting a " + method + " stream request for channel " + str(channel_id))
+            hdhr.tuner_usage(1)
+
+            channelUri = hdhr.origserv.get_channel_stream(channel_id)
+            # print("Proxy URL determined as " + str(channelUri))
 
             if method == "direct":
-                duration = request.args.get('duration', default=0, type=int)
-
-                if not duration == 0:
-                    duration += time.time()
+                chunksize = int(hdhr.config.dict["direct_stream"]['chunksize'])
 
                 req = requests.get(channelUri, stream=True)
-                hdhr.tuner_usage(1)
 
                 def generate():
                     try:
-                        yield ''
-                        for chunk in req.iter_content(chunk_size=int(hdhr.config["direct_stream"]['chunksize'])):
-                            if not duration == 0 and not time.time() < duration:
-                                req.close()
-                                hdhr.tuner_usage(-1)
-                                break
+                        for chunk in req.iter_content(chunk_size=chunksize):
                             yield chunk
                     except GeneratorExit:
                         req.close()
@@ -311,7 +341,9 @@ class HDHR_HTTP_Server():
 
             elif method == "ffmpeg":
 
-                ffmpeg_command = [hdhr.config["ffmpeg"]["ffmpeg_path"],
+                bytes_per_read = int(hdhr.config.dict["ffmpeg"]["bytes_per_read"])
+
+                ffmpeg_command = [hdhr.config.dict["ffmpeg"]["ffmpeg_path"],
                                   "-i", channelUri,
                                   "-c", "copy",
                                   "-f", "mpegts",
@@ -321,12 +353,11 @@ class HDHR_HTTP_Server():
                                   ]
 
                 ffmpeg_proc = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
-                hdhr.tuner_usage(1)
 
                 def generate():
                     try:
                         while True:
-                            videoData = ffmpeg_proc.stdout.read(int(hdhr.config["ffmpeg"]["bytes_per_read"]))
+                            videoData = ffmpeg_proc.stdout.read(bytes_per_read)
                             if not videoData:
                                 break
                             try:
@@ -366,12 +397,12 @@ class HDHR_HTTP_Server():
             return Response(status=200, response=currenthtmlerror, mimetype='text/html')
 
     def __init__(self, config):
-        self.config = config.copy()
+        self.config = config
 
     def run(self):
         self.http = WSGIServer((
-                            self.config["fakehdhr"]["address"],
-                            int(self.config["fakehdhr"]["port"])
+                            self.config.dict["fhdhr"]["address"],
+                            int(self.config.dict["fhdhr"]["port"])
                             ), self.app.wsgi_app)
         try:
             self.http.serve_forever()
@@ -379,7 +410,8 @@ class HDHR_HTTP_Server():
             self.http.stop()
 
 
-def interface_start(config, serviceproxy, epghandling):
-    hdhr.hubprep(config, serviceproxy, epghandling)
+def interface_start(config, origserv, epghandling):
+    print("Starting fHDHR Web Interface")
+    hdhr.hubprep(config, origserv, epghandling)
     fakhdhrserver = HDHR_HTTP_Server(config)
     fakhdhrserver.run()
