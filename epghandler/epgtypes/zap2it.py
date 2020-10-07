@@ -117,6 +117,8 @@ class ZapEPG():
         zap_time_window = int(self.config["zap2it"]["timespan"]) * 3600
         zap_time = int(zap_time - (zap_time % zap_time_window))
 
+        self.remove_stale_cache(zap_time)
+
         # Fetch data in `zap_timespan` chunks.
         for i in range(int(7 * 24 / int(self.config["zap2it"]["timespan"]))):
             i_time = zap_time + (i * zap_time_window)
@@ -195,6 +197,9 @@ class ZapEPG():
                         clean_prog_dict["isnew"] = True
 
                     programguide[str(cdict["channelNo"])]["listing"].append(clean_prog_dict)
+
+        for cnum in programguide:
+            programguide[cnum]["listing"] = sorted(programguide[cnum]["listing"], key=lambda i: i['time_start'])
 
         self.epg_cache = programguide
         with open(self.epg_cache_file, 'w') as epgfile:

@@ -294,6 +294,9 @@ class proxyserviceFetcher():
 
                         programguide[str(cdict["number"])]["listing"].append(clean_prog_dict)
 
+        for cnum in programguide:
+            programguide[cnum]["listing"] = sorted(programguide[cnum]["listing"], key=lambda i: i['time_start'])
+
         self.epg_cache = programguide
         with open(self.epg_cache_file, 'w') as epgfile:
             epgfile.write(json.dumps(programguide, indent=4))
