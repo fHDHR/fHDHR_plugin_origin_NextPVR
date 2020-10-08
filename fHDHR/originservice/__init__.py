@@ -26,12 +26,14 @@ class OriginService():
             for chankey in list(chan.keys()):
                 self.channels["list"][chan["number"]][chankey] = chan[chankey]
 
-    def get_channels(self):
+    def get_channels(self, forceupdate=False):
 
         updatelist = False
         if not self.channels["list_updated"]:
             updatelist = True
         elif hours_between_datetime(self.channels["list_updated"], datetime.datetime.now()) > 12:
+            updatelist = True
+        elif forceupdate:
             updatelist = True
 
         if updatelist:

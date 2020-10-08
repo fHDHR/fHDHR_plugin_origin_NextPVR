@@ -2,6 +2,7 @@ import os
 import sys
 import ast
 import requests
+import xml.etree.ElementTree
 
 UNARY_OPS = (ast.UAdd, ast.USub)
 BINARY_OPS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod)
@@ -11,6 +12,13 @@ def clean_exit():
     sys.stderr.flush()
     sys.stdout.flush()
     os._exit(0)
+
+
+def sub_el(parent, name, text=None, **kwargs):
+    el = xml.etree.ElementTree.SubElement(parent, name, **kwargs)
+    if text:
+        el.text = text
+    return el
 
 
 def xmldictmaker(inputdict, req_items, list_items=[], str_items=[]):

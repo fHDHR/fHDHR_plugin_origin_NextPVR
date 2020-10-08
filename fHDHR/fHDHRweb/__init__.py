@@ -1,203 +1,69 @@
 from gevent.pywsgi import WSGIServer
 from flask import (Flask, send_from_directory, request, Response,
                    abort, stream_with_context)
-from io import BytesIO
-import xml.etree.ElementTree as ET
-import json
 import requests
 import subprocess
-import threading
-import PIL.Image
-import PIL.ImageDraw
-import PIL.ImageFont
 
-
-def sub_el(parent, name, text=None, **kwargs):
-    el = ET.SubElement(parent, name, **kwargs)
-    if text:
-        el.text = text
-    return el
-
-
-def getSize(txt, font):
-    testImg = PIL.Image.new('RGB', (1, 1))
-    testDraw = PIL.ImageDraw.Draw(testImg)
-    return testDraw.textsize(txt, font)
+from . import fHDHRdevice
+from fHDHR.fHDHRerrors import TunerError
 
 
 class HDHR_Hub():
-    config = None
-    origserv = None
-    epghandling = None
-    station_scan = False
-    station_list = []
-    http = None
 
     def __init__(self):
-        self.tuner_lock = threading.Lock()
-        self.tuners = 0
+        pass
 
-    def hubprep(self, config, origserv, epghandling):
-        self.config = config
-        self.max_tuners = int(self.config.dict["fhdhr"]["tuner_count"])
-        self.station_scan = False
+    def hubprep(self, settings, origserv, epghandling):
+        self.config = settings
+
+        self.devicexml = fHDHRdevice.Device_XML(settings)
+        self.discoverjson = fHDHRdevice.Discover_JSON(settings)
+        self.lineupxml = fHDHRdevice.Lineup_XML(settings, origserv)
+        self.lineupjson = fHDHRdevice.Lineup_JSON(settings, origserv)
+        self.lineupstatusjson = fHDHRdevice.Lineup_Status_JSON(settings, origserv)
+        self.images = fHDHRdevice.imageHandler(settings, epghandling)
+        self.tuners = fHDHRdevice.Tuners(settings)
+        self.station_scan = fHDHRdevice.Station_Scan(settings, origserv)
+        self.xmltv = fHDHRdevice.xmlTV_XML(settings, epghandling)
+        self.htmlerror = fHDHRdevice.HTMLerror(settings)
+
+        self.debug = fHDHRdevice.Debug_JSON(settings, origserv, epghandling)
+
         self.origserv = origserv
         self.epghandling = epghandling
 
-    def tuner_usage(self, number):
-        self.tuner_lock.acquire()
-        self.tuners += number
-        if self.tuners < 0:
-            self.tuners = 0
-        elif self.tuners > self.max_tuners:
-            self.tuners = self.max_tuners
-        self.tuner_lock.release()
+    def tuner_grab(self):
+        self.tuners.tuner_grab()
 
-    def get_tuner(self):
-        if self.tuners <= self.max_tuners:
-            return True
-        return False
+    def tuner_close(self):
+        self.tuners.tuner_close()
 
     def get_xmltv(self, base_url):
-        return self.epghandling.get_xmltv(base_url)
+        return self.xmltv.get_xmltv_xml(base_url)
 
-    def generate_image(self, messagetype, message):
-        if messagetype == "channel":
-            width = 360
-            height = 270
-            fontsize = 72
-        elif messagetype == "content":
-            width = 1080
-            height = 1440
-            fontsize = 100
-
-        colorBackground = "#228822"
-        colorText = "#717D7E"
-        colorOutline = "#717D7E"
-        fontname = str(self.config.dict["filedir"]["font"])
-
-        font = PIL.ImageFont.truetype(fontname, fontsize)
-        text_width, text_height = getSize(message, font)
-        img = PIL.Image.new('RGBA', (width+4, height+4), colorBackground)
-        d = PIL.ImageDraw.Draw(img)
-        d.text(((width-text_width)/2, (height-text_height)/2), message, fill=colorText, font=font)
-        d.rectangle((0, 0, width+3, height+3), outline=colorOutline)
-
-        s = BytesIO()
-        img.save(s, 'png')
-        return s.getvalue()
-
-    def get_image(self, req_args):
-
-        imageUri = self.epghandling.get_thumbnail(req_args["type"], req_args["id"])
-        if not imageUri:
-            return self.generate_image(req_args["type"], req_args["id"])
-
-        try:
-            req = requests.get(imageUri)
-            return req.content
-        except Exception as e:
-            print(e)
-            return self.generate_image(req_args["type"], req_args["id"])
-
-    def get_image_type(self, image_data):
-        header_byte = image_data[0:3].hex().lower()
-        if header_byte == '474946':
-            return "image/gif"
-        elif header_byte == '89504e':
-            return "image/png"
-        elif header_byte == 'ffd8ff':
-            return "image/jpeg"
-        else:
-            return "image/jpeg"
-
-    def get_xmldiscover(self, base_url):
-        out = ET.Element('root')
-        out.set('xmlns', "urn:schemas-upnp-org:device-1-0")
-
-        sub_el(out, 'URLBase', "http://" + base_url)
-
-        specVersion_out = sub_el(out, 'specVersion')
-        sub_el(specVersion_out, 'major', "1")
-        sub_el(specVersion_out, 'minor', "0")
-
-        device_out = sub_el(out, 'device')
-        sub_el(device_out, 'deviceType', "urn:schemas-upnp-org:device:MediaServer:1")
-        sub_el(device_out, 'friendlyName', self.config.dict["fhdhr"]["friendlyname"])
-        sub_el(device_out, 'manufacturer', self.config.dict["dev"]["reporting_manufacturer"])
-        sub_el(device_out, 'modelName', self.config.dict["dev"]["reporting_model"])
-        sub_el(device_out, 'modelNumber', self.config.dict["dev"]["reporting_model"])
-        sub_el(device_out, 'serialNumber')
-        sub_el(device_out, 'UDN', "uuid:" + self.config.dict["main"]["uuid"])
-
-        fakefile = BytesIO()
-        fakefile.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-        fakefile.write(ET.tostring(out, encoding='UTF-8'))
-        return fakefile.getvalue()
+    def get_device_xml(self, base_url):
+        return self.devicexml.get_device_xml(base_url)
 
     def get_discover_json(self, base_url):
-        jsondiscover = {
-                            "FriendlyName": self.config.dict["fhdhr"]["friendlyname"],
-                            "Manufacturer": "Borondust",
-                            "ModelNumber": self.config.dict["dev"]["reporting_model"],
-                            "FirmwareName": self.config.dict["dev"]["reporting_firmware_name"],
-                            "TunerCount": self.config.dict["fhdhr"]["tuner_count"],
-                            "FirmwareVersion": self.config.dict["dev"]["reporting_firmware_ver"],
-                            "DeviceID": self.config.dict["main"]["uuid"],
-                            "DeviceAuth": "fHDHR",
-                            "BaseURL": "http://" + base_url,
-                            "LineupURL": "http://" + base_url + "/lineup.json"
-                        }
-        return jsondiscover
+        return self.discoverjson.get_discover_json(base_url)
 
-    def get_lineup_status(self):
-        if self.station_scan:
-            channel_count = self.origserv.get_station_total()
-            jsonlineup = {
-                          "ScanInProgress": "true",
-                          "Progress": 99,
-                          "Found": channel_count
-                          }
-        else:
-            jsonlineup = {
-                          "ScanInProgress": "false",
-                          "ScanPossible": "true",
-                          "Source": self.config.dict["dev"]["reporting_tuner_type"],
-                          "SourceList": [self.config.dict["dev"]["reporting_tuner_type"]],
-                          }
-        return jsonlineup
+    def get_lineup_status_json(self):
+        return self.lineupstatusjson.get_lineup_json(self.station_scan.scanning())
 
     def get_lineup_xml(self, base_url):
-        out = ET.Element('Lineup')
-        station_list = self.origserv.get_station_list(base_url)
-        for station_item in station_list:
-            program_out = sub_el(out, 'Program')
-            sub_el(program_out, 'GuideNumber', station_item['GuideNumber'])
-            sub_el(program_out, 'GuideName', station_item['GuideName'])
-            sub_el(program_out, 'URL', station_item['URL'])
+        return self.lineupxml.get_lineup_xml(base_url)
 
-        fakefile = BytesIO()
-        fakefile.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-        fakefile.write(ET.tostring(out, encoding='UTF-8'))
-        return fakefile.getvalue()
+    def get_lineup_json(self, base_url):
+        return self.lineupjson.get_lineup_json(base_url)
 
-    def get_debug(self, base_url):
-        debugjson = {
-                    "base_url": base_url,
-                    }
-        return debugjson
+    def get_debug_json(self, base_url):
+        return self.debug.get_debug_json(base_url, self.tuners.tuners)
 
     def get_html_error(self, message):
-        htmlerror = """<html>
-                        <head></head>
-                        <body>
-                            <h2>{}</h2>
-                        </body>
-                        </html>"""
-        return htmlerror.format(message)
+        return self.htmlerror.get_html_error(message)
 
-    def station_scan_change(self, enablement):
-        self.station_scan = enablement
+    def post_lineup_scan_start(self):
+        self.station_scan.scan()
 
 
 hdhr = HDHR_Hub()
@@ -219,24 +85,24 @@ class HDHR_HTTP_Server():
     @app.route('/device.xml', methods=['GET'])
     def device_xml():
         base_url = request.headers["host"]
-        devicexml = hdhr.get_xmldiscover(base_url)
+        device_xml = hdhr.get_device_xml(base_url)
         return Response(status=200,
-                        response=devicexml,
+                        response=device_xml,
                         mimetype='application/xml')
 
     @app.route('/discover.json', methods=['GET'])
     def discover_json():
         base_url = request.headers["host"]
-        jsondiscover = hdhr.get_discover_json(base_url)
+        discover_json = hdhr.get_discover_json(base_url)
         return Response(status=200,
-                        response=json.dumps(jsondiscover, indent=4),
+                        response=discover_json,
                         mimetype='application/json')
 
     @app.route('/lineup_status.json', methods=['GET'])
     def lineup_status_json():
-        linup_status_json = hdhr.get_lineup_status()
+        linup_status_json = hdhr.get_lineup_status_json()
         return Response(status=200,
-                        response=json.dumps(linup_status_json, indent=4),
+                        response=linup_status_json,
                         mimetype='application/json')
 
     @app.route('/lineup.xml', methods=['GET'])
@@ -250,9 +116,9 @@ class HDHR_HTTP_Server():
     @app.route('/lineup.json', methods=['GET'])
     def lineup_json():
         base_url = request.headers["host"]
-        station_list = hdhr.origserv.get_station_list(base_url)
+        station_list = hdhr.get_lineup_json(base_url)
         return Response(status=200,
-                        response=json.dumps(station_list, indent=4),
+                        response=station_list,
                         mimetype='application/json')
 
     @app.route('/xmltv.xml', methods=['GET'])
@@ -266,16 +132,16 @@ class HDHR_HTTP_Server():
     @app.route('/debug.json', methods=['GET'])
     def debug_json():
         base_url = request.headers["host"]
-        debugreport = hdhr.get_debug(base_url)
+        debugreport = hdhr.get_debug_json(base_url)
         return Response(status=200,
-                        response=json.dumps(debugreport, indent=4),
+                        response=debugreport,
                         mimetype='application/json')
 
     @app.route('/images', methods=['GET'])
     def images():
 
         if 'source' not in list(request.args.keys()):
-            image = hdhr.generate_image("content", "Unknown Request")
+            image = hdhr.images.generate_image("content", "Unknown Request")
         else:
 
             itemtype = 'content'
@@ -289,19 +155,19 @@ class HDHR_HTTP_Server():
                                 "type": request.args["type"],
                                 "id": request.args["id"],
                                 }
-                    image = hdhr.get_image(req_dict)
+                    image = hdhr.images.get_image(req_dict)
                 else:
                     itemmessage = "Unknown Request"
-                    image = hdhr.generate_image(itemtype, itemmessage)
+                    image = hdhr.images.generate_image(itemtype, itemmessage)
             elif request.args['source'] == 'generate':
                 itemmessage = "Unknown Request"
                 if 'message' in list(request.args.keys()):
                     itemmessage = request.args["message"]
-                image = hdhr.generate_image(itemtype, itemmessage)
+                image = hdhr.images.generate_image(itemtype, itemmessage)
             else:
                 itemmessage = "Unknown Request"
-                image = hdhr.generate_image(itemtype, itemmessage)
-        return Response(image, content_type=hdhr.get_image_type(image), direct_passthrough=True)
+                image = hdhr.images.generate_image(itemtype, itemmessage)
+        return Response(image, content_type=hdhr.images.get_image_type(image), direct_passthrough=True)
 
     @app.route('/watch', methods=['GET'])
     def watch():
@@ -311,14 +177,14 @@ class HDHR_HTTP_Server():
             method = str(request.args["method"])
             channel_id = str(request.args["channel"])
 
-            tuner = hdhr.get_tuner()
-            if not tuner:
+            try:
+                hdhr.tuner_grab()
+            except TunerError:
                 print("A " + method + " stream request for channel " +
                       str(channel_id) + " was rejected do to a lack of available tuners.")
                 abort(503)
 
             print("Attempting a " + method + " stream request for channel " + str(channel_id))
-            hdhr.tuner_usage(1)
 
             channelUri = hdhr.origserv.get_channel_stream(channel_id)
             # print("Proxy URL determined as " + str(channelUri))
@@ -335,7 +201,7 @@ class HDHR_HTTP_Server():
                     except GeneratorExit:
                         req.close()
                         print("Connection Closed.")
-                        hdhr.tuner_usage(-1)
+                        hdhr.tuner_close()
 
                 return Response(generate(), content_type=req.headers['content-type'], direct_passthrough=True)
 
@@ -366,12 +232,11 @@ class HDHR_HTTP_Server():
                                 ffmpeg_proc.terminate()
                                 ffmpeg_proc.communicate()
                                 print("Connection Closed: " + str(e))
-                                hdhr.tuner_usage(-1)
                     except GeneratorExit:
                         ffmpeg_proc.terminate()
                         ffmpeg_proc.communicate()
                         print("Connection Closed.")
-                        hdhr.tuner_usage(-1)
+                        hdhr.tuner_close()
 
                 return Response(stream_with_context(generate()), mimetype="audio/mpeg")
 
@@ -379,25 +244,20 @@ class HDHR_HTTP_Server():
     def lineup_post():
         if 'scan' in list(request.args.keys()):
             if request.args['scan'] == 'start':
-                hdhr.station_scan_change(True)
-                hdhr.station_list = []
-                hdhr.station_scan_change(False)
+                hdhr.post_lineup_scan_start()
                 return Response(status=200, mimetype='text/html')
-
             elif request.args['scan'] == 'abort':
                 return Response(status=200, mimetype='text/html')
-
             else:
                 print("Unknown scan command " + request.args['scan'])
                 currenthtmlerror = hdhr.get_html_error("501 - " + request.args['scan'] + " is not a valid scan command")
                 return Response(status=200, response=currenthtmlerror, mimetype='text/html')
-
         else:
             currenthtmlerror = hdhr.get_html_error("501 - not a valid command")
             return Response(status=200, response=currenthtmlerror, mimetype='text/html')
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, settings):
+        self.config = settings
 
     def run(self):
         self.http = WSGIServer((
@@ -410,8 +270,8 @@ class HDHR_HTTP_Server():
             self.http.stop()
 
 
-def interface_start(config, origserv, epghandling):
+def interface_start(settings, origserv, epghandling):
     print("Starting fHDHR Web Interface")
-    hdhr.hubprep(config, origserv, epghandling)
-    fakhdhrserver = HDHR_HTTP_Server(config)
+    hdhr.hubprep(settings, origserv, epghandling)
+    fakhdhrserver = HDHR_HTTP_Server(settings)
     fakhdhrserver.run()
