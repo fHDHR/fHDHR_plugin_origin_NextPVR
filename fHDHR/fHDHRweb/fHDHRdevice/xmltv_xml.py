@@ -1,6 +1,5 @@
 import xml.etree.ElementTree
 from io import BytesIO
-import time
 
 from fHDHR.tools import sub_el
 
@@ -12,28 +11,11 @@ class xmlTV_XML():
     def __init__(self, settings, epghandling):
         self.config = settings
         self.epghandling = epghandling
-        self.updated_at = None
-        self.epg_method = self.config.dict["fhdhr"]["epg_method"]
-        self.epg_sleeptime = self.config.dict[self.epg_method]["epg_update_frequency"]
 
-    def get_xmltv_xml(self, base_url, force_update=False):
-        nowtime = time.time()
-        update_xmltv = False
+    def get_xmltv_xml(self, base_url):
 
-        if not self.xmltv_xml or force_update:
-            update_xmltv = True
-        elif not self.updated_at:
-            update_xmltv = True
-        elif nowtime >= (self.updated_at + self.epg_sleeptime):
-            update_xmltv = True
-
-        if update_xmltv:
-            print("Updating xmltv cache.")
-            epgdict = self.epghandling.epgtypes.get_epg()
-            self.xmltv_xml = self.create_xmltv(base_url, epgdict)
-            self.updated_at = nowtime
-
-        return self.xmltv_xml
+        epgdict = self.epghandling.epgtypes.get_epg()
+        return self.create_xmltv(base_url, epgdict)
 
     def xmltv_headers(self):
         """This method creates the XML headers for our xmltv"""
