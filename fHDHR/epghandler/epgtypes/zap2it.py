@@ -142,12 +142,11 @@ class ZapEPG():
             time.sleep(int(delay))
             return result
 
-    def remove_stale_cache(self, todaydate):
+    def remove_stale_cache(self, zap_time):
         for p in self.web_cache_dir.glob('*'):
             try:
-                cachedate = datetime.datetime.strptime(str(p.name), "%Y-%m-%d")
-                todaysdate = datetime.datetime.strptime(str(todaydate), "%Y-%m-%d")
-                if cachedate >= todaysdate:
+                t = int(p.name)
+                if t >= zap_time:
                     continue
             except Exception as e:
                 print(e)
