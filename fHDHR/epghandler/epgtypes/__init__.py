@@ -30,17 +30,27 @@ class EPGTypes():
         return epgdict
 
     def get_thumbnail(self, itemtype, itemid):
-        epgdict = self.get_epg()
         if itemtype == "channel":
-            for channel in list(epgdict.keys()):
-                if epgdict[channel]["id"] == itemid:
-                    return epgdict[channel]["thumbnail"]
+            chandict = self.find_channel_dict(itemid)
+            return chandict["thumbnail"]
         elif itemtype == "content":
-            for channel in list(epgdict.keys()):
-                for progitem in epgdict[channel]["listing"]:
-                    if progitem["id"] == itemid:
-                        return progitem["thumbnail"]
+            progdict = self.find_program_dict(itemid)
+            return progdict["thumbnail"]
         return None
+
+    def find_channel_dict(self, channel_id):
+        epgdict = self.get_epg()
+        channel_list = []
+        for channel in list(epgdict.keys()):
+            channel_list.append(epgdict[channel])
+        return next(item for item in channel_list if item["id"] == channel_id)
+
+    def find_program_dict(self, event_id):
+        epgdict = self.get_epg()
+        event_list = []
+        for channel in list(epgdict.keys()):
+            event_list.extend(epgdict[channel]["listing"])
+        return next(item for item in event_list if item["id"] == event_id)
 
     def update(self):
 

@@ -65,6 +65,9 @@ class HDHR_Hub():
     def post_lineup_scan_start(self):
         self.station_scan.scan()
 
+    def get_image(self, request_args):
+        return self.images.get_image(request_args)
+
 
 hdhr = HDHR_Hub()
 
@@ -139,35 +142,8 @@ class HDHR_HTTP_Server():
 
     @app.route('/images', methods=['GET'])
     def images():
-
-        if 'source' not in list(request.args.keys()):
-            image = hdhr.images.generate_image("content", "Unknown Request")
-        else:
-
-            itemtype = 'content'
-            if 'type' in list(request.args.keys()):
-                itemtype = request.args["type"]
-
-            if request.args['source'] == 'epg':
-                if 'id' in list(request.args.keys()):
-                    req_dict = {
-                                "source": request.args["source"],
-                                "type": request.args["type"],
-                                "id": request.args["id"],
-                                }
-                    image = hdhr.images.get_image(req_dict)
-                else:
-                    itemmessage = "Unknown Request"
-                    image = hdhr.images.generate_image(itemtype, itemmessage)
-            elif request.args['source'] == 'generate':
-                itemmessage = "Unknown Request"
-                if 'message' in list(request.args.keys()):
-                    itemmessage = request.args["message"]
-                image = hdhr.images.generate_image(itemtype, itemmessage)
-            else:
-                itemmessage = "Unknown Request"
-                image = hdhr.images.generate_image(itemtype, itemmessage)
-        return Response(image, content_type=hdhr.images.get_image_type(image), direct_passthrough=True)
+        image, imagetype = hdhr.get_image(request.args)
+        return Response(image, content_type=imagetype, direct_passthrough=True)
 
     @app.route('/watch', methods=['GET'])
     def watch():
