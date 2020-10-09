@@ -77,8 +77,8 @@ class ZapEPG():
                     programguide[str(cdict['channelNo'])] = {
                                                         "callsign": cdict["callSign"],
                                                         "name": cdict["name"] or cdict["callSign"],  # TODO
-                                                        "number": cdict["channelNo"],
-                                                        "id": cdict["channelId"],
+                                                        "number": str(cdict["channelNo"]),
+                                                        "id": str(cdict["channelId"]),
                                                         "thumbnail": str(cdict['thumbnail']).replace("//", "https://").split("?")[0],
                                                         "listing": [],
                                                         }
@@ -103,7 +103,7 @@ class ZapEPG():
                                     "seasonnumber": progdict['season'],
                                     "episodenumber": progdict['episode'],
                                     "isnew": False,
-                                    "id": progdict['id'] or self.xmltimestamp_zap(eventdict['startTime']),
+                                    "id": str(progdict['id'] or self.xmltimestamp_zap(eventdict['startTime'])),
                                     }
 
                     for f in eventdict['filter']:

@@ -137,7 +137,7 @@ class fHDHRservice():
                                                     "callsign": cdict["callsign"],
                                                     "name": cdict["name"] or cdict["callsign"],
                                                     "number": cdict["number"],
-                                                    "id": cdict["id"],
+                                                    "id": str(cdict["id"]),
                                                     "thumbnail": self.get_channel_thumbnail(cdict['id']),
                                                     "listing": [],
                                                     }
@@ -172,7 +172,7 @@ class fHDHRservice():
                                             "seasonnumber": progdict['season'],
                                             "episodenumber": progdict['episode'],
                                             "isnew": False,
-                                            "id": progdict['id'] or self.xmltimestamp_nextpvr(progdict["start"]),
+                                            "id": str(progdict['id'] or self.xmltimestamp_nextpvr(progdict["start"])),
                                             }
 
                         if 'genre' in list(progdict.keys()):

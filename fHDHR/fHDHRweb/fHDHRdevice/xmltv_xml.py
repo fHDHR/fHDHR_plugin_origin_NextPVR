@@ -12,7 +12,7 @@ class xmlTV_XML():
         self.config = settings
         self.epghandling = epghandling
 
-    def get_xmltv_xml(self, base_url):
+    def get_xmltv_xml(self, base_url, force_update=False):
 
         epgdict = self.epghandling.epgtypes.get_epg()
         return self.create_xmltv(base_url, epgdict)
@@ -58,9 +58,9 @@ class xmlTV_XML():
             sub_el(c_out, 'display-name', text=epgdict[c]['name'])
 
             if epgdict[c]["thumbnail"] is not None:
-                sub_el(c_out, 'icon', src=("http://" + str(base_url) + "/images?source=epg&type=channel&id=" + epgdict[c]['id']))
+                sub_el(c_out, 'icon', src=("http://" + str(base_url) + "/images?source=epg&type=channel&id=" + str(epgdict[c]['id'])))
             else:
-                sub_el(c_out, 'icon', src=("http://" + str(base_url) + "/images?source=generate&message=" + epgdict[c]['number']))
+                sub_el(c_out, 'icon', src=("http://" + str(base_url) + "/images?source=generate&message=" + str(epgdict[c]['number'])))
 
         for channelnum in list(epgdict.keys()):
 
@@ -98,7 +98,7 @@ class xmlTV_XML():
                            text='S%02dE%02d' % (s_, e_))
 
                 if program["thumbnail"]:
-                    sub_el(prog_out, 'icon', src=("http://" + str(base_url) + "/images?source=epg&type=content&id=" + program['id']))
+                    sub_el(prog_out, 'icon', src=("http://" + str(base_url) + "/images?source=epg&type=content&id=" + str(program['id'])))
                 else:
                     sub_el(prog_out, 'icon', src=("http://" + str(base_url) + "/images?source=generate&message=" + program['title'].replace(" ", "")))
 
