@@ -1,6 +1,6 @@
 import datetime
 
-import fHDHR.originservice.nextpvr as serviceorigin
+from . import nextpvr as serviceorigin
 from fHDHR.tools import hours_between_datetime
 from fHDHR.fHDHRerrors import LoginError
 
