@@ -65,8 +65,11 @@ class HDHR_Hub():
     def get_image(self, request_args):
         return self.images.get_image(request_args)
 
-    def get_stream(self, request_args):
-        return self.watch.get_stream(request_args)
+    def get_stream_info(self, request_args):
+        return self.watch.get_stream_info(request_args)
+
+    def get_stream(self, channel_id, method, channelUri, content_type):
+        return self.watch.get_stream(channel_id, method, channelUri, content_type)
 
 
 hdhr = HDHR_Hub()
@@ -148,9 +151,15 @@ class HDHR_HTTP_Server():
     @app.route('/watch', methods=['GET'])
     def watch():
         if 'method' in list(request.args.keys()) and 'channel' in list(request.args.keys()):
-            return Response(stream_with_context(hdhr.get_stream(request.args)))
-        else:
-            abort(503)
+            channel_id = str(request.args["channel"])
+            method = str(request.args["method"])
+            method, channelUri, content_type = hdhr.get_stream_info(request.args)
+            if channelUri:
+                if method == "direct":
+                    return Response(hdhr.get_stream(channel_id, method, channelUri, content_type), content_type=content_type, direct_passthrough=True)
+                elif method == "ffmpeg":
+                    return Response(stream_with_context(hdhr.get_stream(channel_id, method, channelUri, content_type)), mimetype="video/mpeg")
+        abort(503)
 
     @app.route('/lineup.post', methods=['POST'])
     def lineup_post():
