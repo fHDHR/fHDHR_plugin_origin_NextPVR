@@ -1,11 +1,7 @@
 from gevent.pywsgi import WSGIServer
-from flask import (Flask, send_from_directory, request, Response,
-                   abort, stream_with_context)
-import requests
-import subprocess
+from flask import Flask, send_from_directory, request, abort, Response, stream_with_context
 
 from . import fHDHRdevice
-from fHDHR.fHDHRerrors import TunerError
 
 
 class HDHR_Hub():
@@ -23,6 +19,7 @@ class HDHR_Hub():
         self.lineupstatusjson = fHDHRdevice.Lineup_Status_JSON(settings, origserv)
         self.images = fHDHRdevice.imageHandler(settings, epghandling)
         self.tuners = fHDHRdevice.Tuners(settings)
+        self.watch = fHDHRdevice.WatchStream(settings, origserv, self.tuners)
         self.station_scan = fHDHRdevice.Station_Scan(settings, origserv)
         self.xmltv = fHDHRdevice.xmlTV_XML(settings, epghandling)
         self.htmlerror = fHDHRdevice.HTMLerror(settings)
@@ -67,6 +64,9 @@ class HDHR_Hub():
 
     def get_image(self, request_args):
         return self.images.get_image(request_args)
+
+    def get_stream(self, request_args):
+        return self.watch.get_stream(request_args)
 
 
 hdhr = HDHR_Hub()
@@ -147,74 +147,10 @@ class HDHR_HTTP_Server():
 
     @app.route('/watch', methods=['GET'])
     def watch():
-
         if 'method' in list(request.args.keys()) and 'channel' in list(request.args.keys()):
-
-            method = str(request.args["method"])
-            channel_id = str(request.args["channel"])
-
-            try:
-                hdhr.tuner_grab()
-            except TunerError:
-                print("A " + method + " stream request for channel " +
-                      str(channel_id) + " was rejected do to a lack of available tuners.")
-                abort(503)
-
-            print("Attempting a " + method + " stream request for channel " + str(channel_id))
-
-            channelUri = hdhr.origserv.get_channel_stream(channel_id)
-            # print("Proxy URL determined as " + str(channelUri))
-
-            if method == "direct":
-                chunksize = int(hdhr.config.dict["direct_stream"]['chunksize'])
-
-                req = requests.get(channelUri, stream=True)
-
-                def generate():
-                    try:
-                        for chunk in req.iter_content(chunk_size=chunksize):
-                            yield chunk
-                    except GeneratorExit:
-                        req.close()
-                        print("Connection Closed.")
-                        hdhr.tuner_close()
-
-                return Response(generate(), content_type=req.headers['content-type'], direct_passthrough=True)
-
-            elif method == "ffmpeg":
-
-                bytes_per_read = int(hdhr.config.dict["ffmpeg"]["bytes_per_read"])
-
-                ffmpeg_command = [hdhr.config.dict["ffmpeg"]["ffmpeg_path"],
-                                  "-i", channelUri,
-                                  "-c", "copy",
-                                  "-f", "mpegts",
-                                  "-nostats", "-hide_banner",
-                                  "-loglevel", "warning",
-                                  "pipe:stdout"
-                                  ]
-
-                ffmpeg_proc = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
-
-                def generate():
-                    try:
-                        while True:
-                            videoData = ffmpeg_proc.stdout.read(bytes_per_read)
-                            if not videoData:
-                                break
-                            try:
-                                yield videoData
-                            except Exception as e:
-                                ffmpeg_proc.terminate()
-                                ffmpeg_proc.communicate()
-                                print("Connection Closed: " + str(e))
-                    except GeneratorExit:
-                        ffmpeg_proc.terminate()
-                        ffmpeg_proc.communicate()
-                        print("Connection Closed.")
-                        hdhr.tuner_close()
-
-                return Response(stream_with_context(generate()), mimetype="audio/mpeg")
+            return Response(stream_with_context(hdhr.get_stream(request.args)))
+        else:
+            abort(503)
 
     @app.route('/lineup.post', methods=['POST'])
     def lineup_post():

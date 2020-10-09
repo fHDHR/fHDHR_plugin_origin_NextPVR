@@ -1,6 +1,7 @@
 # pylama:ignore=W0611
 from .tuners import Tuners
 from .images import imageHandler
+from .watch import WatchStream
 from .station_scan import Station_Scan
 
 from .discover_json import Discover_JSON
