@@ -59,6 +59,10 @@ class OriginService():
 
         return loginsuccess
 
+    def get_status_dict(self):
+        ret_status_dict = {}
+        return ret_status_dict
+
     def get_channels(self):
 
         data_url = ('%s%s:%s/service?method=channel.list&sid=%s' %
