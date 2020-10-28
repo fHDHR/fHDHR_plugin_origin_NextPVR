@@ -59,6 +59,18 @@ class OriginService():
 
         return loginsuccess
 
+    def get_status_dict(self):
+        nextpvr_address = ('%s%s:%s' %
+                           ("https://" if self.config.dict["origin"]["ssl"] else "http://",
+                            self.config.dict["origin"]["address"],
+                            str(self.config.dict["origin"]["port"]),
+                            ))
+        ret_status_dict = {
+                            "Login": "Success",
+                            "Address": nextpvr_address,
+                            }
+        return ret_status_dict
+
     def get_channels(self):
 
         data_url = ('%s%s:%s/service?method=channel.list&sid=%s' %

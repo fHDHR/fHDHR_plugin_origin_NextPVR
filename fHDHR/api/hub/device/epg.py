@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import datetime
 from collections import OrderedDict
 from multiprocessing import Process
 
@@ -15,6 +16,8 @@ class EPG():
         self.channels = channels
 
         self.origin = origin_epg.originEPG(settings, channels)
+
+        self.epgdict = None
 
         self.epg_method_selfadd()
 
@@ -31,12 +34,31 @@ class EPG():
             self.epgscan = Process(target=self.epgServerProcess)
             self.epgscan.start()
 
+    def whats_on_now(self, channel):
+        epgdict = self.get_epg()
+        listings = epgdict[channel]["listing"]
+        for listing in listings:
+            nowtime = datetime.datetime.utcnow()
+            start_time = datetime.datetime.strptime(listing["time_start"], '%Y%m%d%H%M%S +0000')
+            end_time = datetime.datetime.strptime(listing["time_end"], '%Y%m%d%H%M%S +0000')
+            if start_time <= nowtime <= end_time:
+                epgitem = epgdict[channel].copy()
+                epgitem["listing"] = [listing]
+                return epgitem
+        return None
+
+    def whats_on_allchans(self):
+        channel_guide_list = []
+        for channel in self.channels.get_channels():
+            channel_guide_list.append(self.whats_on_now(channel["number"]))
+        return channel_guide_list
+
     def get_epg(self):
-        epgdict = None
-        if os.path.isfile(self.epg_cache_file):
-            with open(self.epg_cache_file, 'r') as epgfile:
-                epgdict = json.load(epgfile)
-        return epgdict
+        if not self.epgdict:
+            if os.path.isfile(self.epg_cache_file):
+                with open(self.epg_cache_file, 'r') as epgfile:
+                    self.epgdict = json.load(epgfile)
+        return self.epgdict
 
     def get_thumbnail(self, itemtype, itemid):
         if itemtype == "channel":
@@ -86,6 +108,7 @@ class EPG():
         with open(self.epg_cache_file, 'w') as epgfile:
             epgfile.write(json.dumps(programguide, indent=4))
         print("Wrote " + self.epgtypename + " EPG cache file.")
+        self.epgdict = programguide
 
     def epgServerProcess(self):
         print("Starting EPG thread...")
