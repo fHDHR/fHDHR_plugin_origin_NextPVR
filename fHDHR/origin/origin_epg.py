@@ -6,26 +6,24 @@ import fHDHR.tools
 
 class OriginEPG():
 
-    def __init__(self, settings, logger, web):
-        self.config = settings
-        self.logger = logger
-        self.web = web
+    def __init__(self, fhdhr):
+        self.fhdhr = fhdhr
 
     def get_channel_thumbnail(self, channel_id):
         channel_thumb_url = ("%s%s:%s/service?method=channel.icon&channel_id=%s" %
-                             ("https://" if self.config.dict["origin"]["ssl"] else "http://",
-                              self.config.dict["origin"]["address"],
-                              str(self.config.dict["origin"]["port"]),
+                             ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                              self.fhdhr.config.dict["origin"]["address"],
+                              str(self.fhdhr.config.dict["origin"]["port"]),
                               str(channel_id)
                               ))
         return channel_thumb_url
 
     def get_content_thumbnail(self, content_id):
         item_thumb_url = ("%s%s:%s/service?method=channel.show.artwork&sid=%s&event_id=%s" %
-                          ("https://" if self.config.dict["origin"]["ssl"] else "http://",
-                           self.config.dict["origin"]["address"],
-                           str(self.config.dict["origin"]["port"]),
-                           self.config.dict["origin"]["sid"],
+                          ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                           self.fhdhr.config.dict["origin"]["address"],
+                           str(self.fhdhr.config.dict["origin"]["port"]),
+                           self.fhdhr.config.dict["origin"]["sid"],
                            str(content_id)
                            ))
         return item_thumb_url
@@ -57,12 +55,12 @@ class OriginEPG():
                                                     }
 
             epg_url = ('%s%s:%s/service?method=channel.listings&channel_id=%s' %
-                       ("https://" if self.config.dict["origin"]["ssl"] else "http://",
-                        self.config.dict["origin"]["address"],
-                        str(self.config.dict["origin"]["port"]),
+                       ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                        self.fhdhr.config.dict["origin"]["address"],
+                        str(self.fhdhr.config.dict["origin"]["port"]),
                         str(cdict["id"]),
                         ))
-            epg_req = self.web.session.get(epg_url)
+            epg_req = self.fhdhr.web.session.get(epg_url)
             epg_dict = xmltodict.parse(epg_req.content)
 
             for program_listing in epg_dict["rsp"]["listings"]:
