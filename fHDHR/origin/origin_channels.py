@@ -4,26 +4,24 @@ import json
 
 class OriginChannels():
 
-    def __init__(self, settings, origin, logger, web):
-        self.config = settings
+    def __init__(self, fhdhr, origin):
+        self.fhdhr = fhdhr
         self.origin = origin
-        self.logger = logger
-        self.web = web
 
     def get_channels(self):
 
         data_url = ('%s%s:%s/service?method=channel.list&sid=%s' %
-                    ("https://" if self.config.dict["origin"]["ssl"] else "http://",
-                     self.config.dict["origin"]["address"],
-                     str(self.config.dict["origin"]["port"]),
+                    ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                     self.fhdhr.config.dict["origin"]["address"],
+                     str(self.fhdhr.config.dict["origin"]["port"]),
                      self.origin.sid
                      ))
 
-        data_req = self.origin.web.session.get(data_url)
+        data_req = self.fhdhr.web.session.get(data_url)
         data_dict = xmltodict.parse(data_req.content)
 
         if 'channels' not in list(data_dict['rsp'].keys()):
-            self.logger.error("Could not retrieve channel list")
+            self.fhdhr.logger.error("Could not retrieve channel list")
             return []
 
         channel_o_list = data_dict['rsp']['channels']['channel']
@@ -47,9 +45,9 @@ class OriginChannels():
         streamlist = []
         streamdict = {}
         streamurl = ('%s%s:%s/live?channel=%s&client=%s' %
-                     ("https://" if self.config.dict["origin"]["ssl"] else "http://",
-                      self.config.dict["origin"]["address"],
-                      str(self.config.dict["origin"]["port"]),
+                     ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                      self.fhdhr.config.dict["origin"]["address"],
+                      str(self.fhdhr.config.dict["origin"]["port"]),
                       str(chandict["number"]),
                       str(chandict["number"]),
                       ))
