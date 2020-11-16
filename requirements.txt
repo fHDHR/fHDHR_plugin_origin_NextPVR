@@ -4,5 +4,5 @@ flask
 image
 xmltodict
 sqlalchemy
-pycrypto
+pycryptodome
 m3u8
