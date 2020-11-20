@@ -40,10 +40,7 @@ class OriginChannels():
             channel_list.append(clean_station_item)
         return channel_list
 
-    def get_channel_stream(self, chandict, allchandict):
-        caching = True
-        streamlist = []
-        streamdict = {}
+    def get_channel_stream(self, chandict):
         streamurl = ('%s%s:%s/live?channel=%s&client=%s' %
                      ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
                       self.fhdhr.config.dict["origin"]["address"],
@@ -51,6 +48,4 @@ class OriginChannels():
                       str(chandict["number"]),
                       str(chandict["number"]),
                       ))
-        streamdict = {"number": chandict["number"], "stream_url": streamurl}
-        streamlist.append(streamdict)
-        return streamlist, caching
+        return streamurl
