@@ -49,8 +49,8 @@ class OriginEPG():
                                                     "callsign": cdict["callsign"],
                                                     "name": cdict["name"] or cdict["callsign"],
                                                     "number": cdict["number"],
-                                                    "id": str(cdict["id"]),
-                                                    "thumbnail": self.get_channel_thumbnail(cdict['id']),
+                                                    "id": str(cdict["origin_id"]),
+                                                    "thumbnail": self.get_channel_thumbnail(cdict['origin_id']),
                                                     "listing": [],
                                                     }
 
@@ -58,7 +58,7 @@ class OriginEPG():
                        ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
                         self.fhdhr.config.dict["origin"]["address"],
                         str(self.fhdhr.config.dict["origin"]["port"]),
-                        str(cdict["id"]),
+                        str(cdict["origin_id"]),
                         ))
             epg_req = self.fhdhr.web.session.get(epg_url)
             epg_dict = xmltodict.parse(epg_req.content)
