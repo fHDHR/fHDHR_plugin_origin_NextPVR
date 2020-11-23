@@ -41,11 +41,11 @@ class OriginChannels():
         return channel_list
 
     def get_channel_stream(self, chandict):
-        streamurl = ('%s%s:%s/live?channel=%s&client=%s' %
+        streamurl = ('%s%s:%s/live?channel_id=%s&client=%s' %
                      ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
                       self.fhdhr.config.dict["origin"]["address"],
                       str(self.fhdhr.config.dict["origin"]["port"]),
-                      str(chandict["number"]),
-                      str(chandict["number"]),
+                      str(chandict["origin_id"]),
+                      "fhdhr_" + str(chandict["origin_number"]),
                       ))
         return streamurl
