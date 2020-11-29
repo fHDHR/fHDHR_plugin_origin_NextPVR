@@ -8,6 +8,15 @@ class OriginChannels():
         self.fhdhr = fhdhr
         self.origin = origin
 
+    def get_channel_thumbnail(self, channel_id):
+        channel_thumb_url = ("%s%s:%s/service?method=channel.icon&channel_id=%s" %
+                             ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                              self.fhdhr.config.dict["origin"]["address"],
+                              str(self.fhdhr.config.dict["origin"]["port"]),
+                              str(channel_id)
+                              ))
+        return channel_thumb_url
+
     def get_channels(self):
 
         data_url = ('%s%s:%s/service?method=channel.list&sid=%s' %
@@ -36,6 +45,7 @@ class OriginChannels():
                                  "callsign": channel_dict["name"],
                                  "number": channel_dict["formatted-number"],
                                  "id": channel_dict["id"],
+                                 "thumbnail": self.get_channel_thumbnail(channel_dict["id"])
                                  }
             channel_list.append(clean_station_item)
         return channel_list
