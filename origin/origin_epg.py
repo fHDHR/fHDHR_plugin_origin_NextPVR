@@ -9,15 +9,6 @@ class OriginEPG():
     def __init__(self, fhdhr):
         self.fhdhr = fhdhr
 
-    def get_channel_thumbnail(self, channel_id):
-        channel_thumb_url = ("%s%s:%s/service?method=channel.icon&channel_id=%s" %
-                             ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
-                              self.fhdhr.config.dict["origin"]["address"],
-                              str(self.fhdhr.config.dict["origin"]["port"]),
-                              str(channel_id)
-                              ))
-        return channel_thumb_url
-
     def get_content_thumbnail(self, content_id):
         item_thumb_url = ("%s%s:%s/service?method=channel.show.artwork&sid=%s&event_id=%s" %
                           ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
@@ -39,26 +30,18 @@ class OriginEPG():
     def update_epg(self, fhdhr_channels):
         programguide = {}
 
-        for c in fhdhr_channels.get_channels():
+        for fhdhr_id in list(self.channels.list.keys()):
+            chan_obj = self.channels.list[fhdhr_id]
 
-            cdict = fHDHR.tools.xmldictmaker(c, ["callsign", "name", "number", "id"])
+            if str(chan_obj.dict['number']) not in list(programguide.keys()):
 
-            if str(cdict['number']) not in list(programguide.keys()):
-
-                programguide[str(cdict['number'])] = {
-                                                    "callsign": cdict["callsign"],
-                                                    "name": cdict["name"] or cdict["callsign"],
-                                                    "number": cdict["number"],
-                                                    "id": str(cdict["origin_id"]),
-                                                    "thumbnail": self.get_channel_thumbnail(cdict['origin_id']),
-                                                    "listing": [],
-                                                    }
+                programguide[str(chan_obj.dict["number"])] = chan_obj.epgdict
 
             epg_url = ('%s%s:%s/service?method=channel.listings&channel_id=%s' %
                        ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
                         self.fhdhr.config.dict["origin"]["address"],
                         str(self.fhdhr.config.dict["origin"]["port"]),
-                        str(cdict["origin_id"]),
+                        str(chan_obj.dict["origin_id"]),
                         ))
             epg_req = self.fhdhr.web.session.get(epg_url)
             epg_dict = xmltodict.parse(epg_req.content)
@@ -97,6 +80,7 @@ class OriginEPG():
 
                         # TODO isNEW
 
-                        programguide[str(cdict["number"])]["listing"].append(clean_prog_dict)
+                        if not any(d['id'] == clean_prog_dict['id'] for d in programguide[str(chan_obj.dict["number"])]["listing"]):
+                            programguide[str(chan_obj.dict["number"])]["listing"].append(clean_prog_dict)
 
         return programguide
