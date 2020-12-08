@@ -15,11 +15,6 @@
                           "config_file": false,
                           "config_web": false
                         },
-          "valid_epg_methods":{
-                          "value": "None,blocks,origin,zap2it",
-                          "config_file": false,
-                          "config_web": false
-                        },
           "required":{
                           "value": "nextpvr/pin",
                           "config_file": false,
@@ -31,16 +26,6 @@
                     "value": "fHDHR-NextPVR",
                     "config_file": true,
                     "config_web": true
-                },
-          "stream_type":{
-                              "value": "direct",
-                              "config_file": true,
-                              "config_web": true
-                              },
-          "tuner_count":{
-                  "value": 4,
-                  "config_file": true,
-                  "config_web": true
                 },
           "reporting_firmware_name":{
                                     "value": "fHDHR_NextPVR",
@@ -54,11 +39,11 @@
                     "config_file": true,
                     "config_web": true
                 },
-          "update_frequency":{
-                    "value": 43200,
-                    "config_file": true,
-                    "config_web": true
-                }
+          "valid_epg_methods":{
+                      "value": "None,blocks,origin,zap2it",
+                      "config_file": false,
+                      "config_web": false
+                    }
   },
   "nextpvr":{
           "address":{
