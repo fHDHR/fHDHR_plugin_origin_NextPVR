@@ -2,3 +2,6 @@
 from .origin_service import *
 from .origin_channels import *
 from .origin_epg import *
+
+ORIGIN_NAME = "fHDHR_NextPVR"
+ORIGIN_VERSION = "v0.5.0-beta"
