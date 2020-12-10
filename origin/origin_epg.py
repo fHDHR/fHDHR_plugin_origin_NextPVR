@@ -30,8 +30,8 @@ class OriginEPG():
     def update_epg(self, fhdhr_channels):
         programguide = {}
 
-        for fhdhr_id in list(self.channels.list.keys()):
-            chan_obj = self.channels.list[fhdhr_id]
+        for fhdhr_id in list(fhdhr_channels.list.keys()):
+            chan_obj = fhdhr_channels.list[fhdhr_id]
 
             if str(chan_obj.dict['number']) not in list(programguide.keys()):
 

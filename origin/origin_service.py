@@ -10,6 +10,12 @@ class OriginService():
     def __init__(self, fhdhr):
         self.fhdhr = fhdhr
 
+        self.nextpvr_address = ('%s%s:%s' %
+                                ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
+                                 self.fhdhr.config.dict["origin"]["address"],
+                                 str(self.fhdhr.config.dict["origin"]["port"]),
+                                 ))
+
         self.login()
 
     def login(self):
@@ -25,11 +31,7 @@ class OriginService():
         if self.fhdhr.config.dict["origin"]["sid"]:
             return self.fhdhr.config.dict["origin"]["sid"]
 
-        initiate_url = ('%s%s:%s/service?method=session.initiate&ver=1.0&device=fhdhr' %
-                        ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
-                         self.fhdhr.config.dict["origin"]["address"],
-                         str(self.fhdhr.config.dict["origin"]["port"]),
-                         ))
+        initiate_url = '%s/service?method=session.initiate&ver=1.0&device=fhdhr' % self.nextpvr_address
 
         initiate_req = self.fhdhr.web.session.get(initiate_url)
         initiate_dict = xmltodict.parse(initiate_req.content)
@@ -40,13 +42,8 @@ class OriginService():
         string = ':%s:%s' % (md5PIN, salt)
         clientKey = hashlib.md5(string.encode('utf-8')).hexdigest()
 
-        login_url = ('%s%s:%s/service?method=session.login&sid=%s&md5=%s' %
-                     ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
-                      self.fhdhr.config.dict["origin"]["address"],
-                      str(self.fhdhr.config.dict["origin"]["port"]),
-                      sid,
-                      clientKey
-                      ))
+        login_url = ('%s/service?method=session.login&sid=%s&md5=%s' %
+                     (self.nextpvr_address, sid, clientKey))
         login_req = self.fhdhr.web.session.get(login_url)
         login_dict = xmltodict.parse(login_req.content)
 
@@ -56,15 +53,3 @@ class OriginService():
                 loginsuccess = sid
 
         return loginsuccess
-
-    def get_status_dict(self):
-        nextpvr_address = ('%s%s:%s' %
-                           ("https://" if self.fhdhr.config.dict["origin"]["ssl"] else "http://",
-                            self.fhdhr.config.dict["origin"]["address"],
-                            str(self.fhdhr.config.dict["origin"]["port"]),
-                            ))
-        ret_status_dict = {
-                            "Login": "Success",
-                            "Address": nextpvr_address,
-                            }
-        return ret_status_dict
