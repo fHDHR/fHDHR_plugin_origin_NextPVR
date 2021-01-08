@@ -144,12 +144,12 @@ class tvtvEPG():
             if cachedate < todaysdate:
                 cache_to_kill.append(cacheitem)
                 self.fhdhr.db.delete_cacheitem_value(cacheitem, "epg_cache", "tvtv")
-                self.fhdhr.logger.info('Removing stale cache:  %s' % cacheitem)
+                self.fhdhr.logger.info("Removing stale cache:  %s" % cacheitem)
         self.fhdhr.db.set_cacheitem_value("cache_list", "epg_cache", [x for x in cache_list if x not in cache_to_kill], "tvtv")
 
     def clear_cache(self):
         cache_list = self.fhdhr.db.get_cacheitem_value("cache_list", "epg_cache", "tvtv") or []
         for cacheitem in cache_list:
             self.fhdhr.db.delete_cacheitem_value(cacheitem, "epg_cache", "tvtv")
-            self.fhdhr.logger.info('Removing cache:  %s' % cacheitem)
+            self.fhdhr.logger.info("Removing cache:  %s" % str(cacheitem))
         self.fhdhr.db.delete_cacheitem_value("cache_list", "epg_cache", "tvtv")
