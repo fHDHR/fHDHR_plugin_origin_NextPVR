@@ -69,7 +69,7 @@ class zap2itEPG():
                                     "time_start": timestamp['time_start'],
                                     "time_end": timestamp['time_end'],
                                     "duration_minutes": eventdict['duration'],
-                                    "thumbnail": str("https://zap2it.tmsimg.com/assets/" + str(eventdict['thumbnail']) + ".jpg"),
+                                    "thumbnail": "https://zap2it.tmsimg.com/assets/%s.jpg" % eventdict['thumbnail'],
                                     "title": progdict['title'] or "Unavailable",
                                     "sub-title": progdict['sub-title'] or "Unavailable",
                                     "description": progdict['shortDesc'] or "Unavailable",
@@ -87,7 +87,7 @@ class zap2itEPG():
                         clean_prog_dict["genres"].append(f.replace('filter-', ''))
 
                     if 'movie' in clean_prog_dict['genres'] and clean_prog_dict['releaseyear']:
-                        clean_prog_dict["sub-title"] = 'Movie: ' + clean_prog_dict['releaseyear']
+                        clean_prog_dict["sub-title"] = 'Movie: %s' % clean_prog_dict['releaseyear']
                     elif clean_prog_dict['episodetitle']:
                         clean_prog_dict["sub-title"] = clean_prog_dict['episodetitle']
 
@@ -162,12 +162,12 @@ class zap2itEPG():
             if cachedate < zap_time:
                 cache_to_kill.append(cacheitem)
                 self.fhdhr.db.delete_cacheitem_value(cacheitem, "epg_cache", "zap2it")
-                self.fhdhr.logger.info('Removing stale cache:  %s' % cacheitem)
+                self.fhdhr.logger.info("Removing stale cache:  %s" % cacheitem)
         self.fhdhr.db.set_cacheitem_value("cache_list", "epg_cache", [x for x in cache_list if x not in cache_to_kill], "zap2it")
 
     def clear_cache(self):
         cache_list = self.fhdhr.db.get_cacheitem_value("cache_list", "epg_cache", "zap2it") or []
         for cacheitem in cache_list:
             self.fhdhr.db.delete_cacheitem_value(cacheitem, "epg_cache", "zap2it")
-            self.fhdhr.logger.info('Removing cache:  %s' % cacheitem)
+            self.fhdhr.logger.info("Removing cache:  %s" % cacheitem)
         self.fhdhr.db.delete_cacheitem_value("cache_list", "epg_cache", "zap2it")
