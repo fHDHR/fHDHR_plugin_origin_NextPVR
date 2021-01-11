@@ -56,7 +56,7 @@ class OriginChannels():
                       self.fhdhr.config.dict["origin"]["address"],
                       str(self.fhdhr.config.dict["origin"]["port"]),
                       str(chandict["origin_id"]),
-                      "fhdhr_" + str(chandict["origin_number"]),
+                      "fhdhr_%s" % chandict["origin_number"],
                       ))
 
         stream_info = {"url": streamurl}
