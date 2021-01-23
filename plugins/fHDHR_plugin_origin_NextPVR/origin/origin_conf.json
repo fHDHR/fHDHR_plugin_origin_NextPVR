@@ -14,11 +14,6 @@
                           "value": "fHDHR_NextPVR",
                           "config_file": false,
                           "config_web": false
-                        },
-          "required":{
-                          "value": "nextpvr/pin",
-                          "config_file": false,
-                          "config_web": false
                         }
   },
   "fhdhr":{
@@ -65,7 +60,8 @@
                     "value": "none",
                     "config_file": true,
                     "config_web": true,
-                    "config_web_hidden": true
+                    "config_web_hidden": true,
+                    "required": true
                 },
           "sid":{
                     "value": "none",
