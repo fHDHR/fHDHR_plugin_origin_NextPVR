@@ -6,3 +6,4 @@ xmltodict
 sqlalchemy
 pycryptodome
 m3u8
+simplejson

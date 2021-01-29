@@ -1,0 +1,31 @@
+{
+  "nextpvr":{
+          "address":{
+                    "value": "localhost",
+                    "config_file": true,
+                    "config_web": true
+                },
+          "port":{
+                    "value": 8866,
+                    "config_file": true,
+                    "config_web": true
+                },
+          "ssl":{
+                    "value": false,
+                    "config_file": true,
+                    "config_web": true
+                },
+          "pin":{
+                    "value": "none",
+                    "config_file": true,
+                    "config_web": true,
+                    "config_web_hidden": true,
+                    "required": true
+                },
+          "sid":{
+                    "value": "none",
+                    "config_file": true,
+                    "config_web": false
+                }
+  }
+}
