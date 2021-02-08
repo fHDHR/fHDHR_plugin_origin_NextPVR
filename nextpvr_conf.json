@@ -26,6 +26,16 @@
                     "value": "none",
                     "config_file": true,
                     "config_web": false
-                }
+                },
+          "tuners":{
+                "value": 4,
+                "config_file": true,
+                "config_web": true
+            },
+      "stream_method":{
+                "value": "direct",
+                "config_file": true,
+                "config_web": true
+            }
   }
 }

@@ -11,6 +11,9 @@ class Plugin_OBJ():
     def __init__(self, plugin_utils):
         self.plugin_utils = plugin_utils
 
+        self.tuners = self.plugin_utils.config.dict["nextpvr"]["tuners"]
+        self.stream_method = self.plugin_utils.config.dict["nextpvr"]["stream_method"]
+
         self.nextpvr_address = ('%s%s:%s' %
                                 ("https://" if self.plugin_utils.config.dict["nextpvr"]["ssl"] else "http://",
                                  self.plugin_utils.config.dict["nextpvr"]["address"],
