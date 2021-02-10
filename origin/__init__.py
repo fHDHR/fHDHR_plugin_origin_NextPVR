@@ -11,29 +11,52 @@ class Plugin_OBJ():
     def __init__(self, plugin_utils):
         self.plugin_utils = plugin_utils
 
-        self.tuners = self.plugin_utils.config.dict["nextpvr"]["tuners"]
-        self.stream_method = self.plugin_utils.config.dict["nextpvr"]["stream_method"]
-
-        self.nextpvr_address = ('%s%s:%s' %
-                                ("https://" if self.plugin_utils.config.dict["nextpvr"]["ssl"] else "http://",
-                                 self.plugin_utils.config.dict["nextpvr"]["address"],
-                                 str(self.plugin_utils.config.dict["nextpvr"]["port"]),
-                                 ))
-
         self.login()
+
+    @property
+    def tuners(self):
+        return self.plugin_utils.config.dict["nextpvr"]["tuners"]
+
+    @property
+    def stream_method(self):
+        return self.plugin_utils.config.dict["nextpvr"]["stream_method"]
+
+    @property
+    def sid(self):
+        return self.plugin_utils.config.dict["nextpvr"]["sid"]
+
+    @property
+    def pin(self):
+        return self.plugin_utils.config.dict["nextpvr"]["pin"]
+
+    @property
+    def address(self):
+        return self.plugin_utils.config.dict["nextpvr"]["address"]
+
+    @property
+    def port(self):
+        return self.plugin_utils.config.dict["nextpvr"]["port"]
+
+    @property
+    def proto(self):
+        return "https://" if self.plugin_utils.config.dict['nextpvr']["ssl"] else "http://"
+
+    @property
+    def address_without_creds(self):
+        return '%s%s:%s' % (self.proto, self.address, str(self.port))
 
     def login(self):
         self.plugin_utils.logger.info("Logging into NextPVR")
-        self.sid = self.get_sid()
-        if not self.sid:
+        sid = self.get_sid()
+        if not sid:
             raise fHDHR.exceptions.OriginSetupError("NextPVR Login Failed")
         else:
             self.plugin_utils.logger.info("NextPVR Login Success")
-            self.plugin_utils.config.write(self.plugin_utils.config.dict["main"]["dictpopname"], 'sid', self.sid)
+            self.plugin_utils.config.write('sid', sid, self.plugin_utils.namespace)
 
     def get_sid(self):
-        if self.plugin_utils.config.dict["nextpvr"]["sid"]:
-            return self.plugin_utils.config.dict["nextpvr"]["sid"]
+        if self.sid:
+            return self.sid
 
         initiate_url = '%s/service?method=session.initiate&ver=1.0&device=fhdhr' % self.nextpvr_address
 
@@ -42,7 +65,7 @@ class Plugin_OBJ():
 
         sid = initiate_dict['rsp']['sid']
         salt = initiate_dict['rsp']['salt']
-        md5PIN = hashlib.md5(str(self.plugin_utils.config.dict["nextpvr"]['pin']).encode('utf-8')).hexdigest()
+        md5PIN = hashlib.md5(str(self.pin).encode('utf-8')).hexdigest()
         string = ':%s:%s' % (md5PIN, salt)
         clientKey = hashlib.md5(string.encode('utf-8')).hexdigest()
 
@@ -59,22 +82,12 @@ class Plugin_OBJ():
         return loginsuccess
 
     def get_channel_thumbnail(self, channel_id):
-        channel_thumb_url = ("%s%s:%s/service?method=channel.icon&channel_id=%s" %
-                             ("https://" if self.plugin_utils.config.dict["nextpvr"]["ssl"] else "http://",
-                              self.plugin_utils.config.dict["nextpvr"]["address"],
-                              str(self.plugin_utils.config.dict["nextpvr"]["port"]),
-                              str(channel_id)
-                              ))
+        channel_thumb_url = "%s/service?method=channel.icon&channel_id=%s" % (self.address_without_creds, channel_id)
         return channel_thumb_url
 
     def get_channels(self):
 
-        data_url = ('%s%s:%s/service?method=channel.list&sid=%s' %
-                    ("https://" if self.plugin_utils.config.dict["nextpvr"]["ssl"] else "http://",
-                     self.plugin_utils.config.dict["nextpvr"]["address"],
-                     str(self.plugin_utils.config.dict["nextpvr"]["port"]),
-                     self.sid
-                     ))
+        data_url = '%s/service?method=channel.list&sid=%s' % (self.address_without_creds, self.sid)
 
         data_req = self.plugin_utils.web.session.get(data_url)
         data_dict = xmltodict.parse(data_req.content)
@@ -101,13 +114,7 @@ class Plugin_OBJ():
         return channel_list
 
     def get_channel_stream(self, chandict, stream_args):
-        streamurl = ('%s%s:%s/live?channel_id=%s&client=%s' %
-                     ("https://" if self.plugin_utils.config.dict["nextpvr"]["ssl"] else "http://",
-                      self.plugin_utils.config.dict["nextpvr"]["address"],
-                      str(self.plugin_utils.config.dict["nextpvr"]["port"]),
-                      str(chandict["origin_id"]),
-                      "fhdhr_%s" % chandict["origin_number"],
-                      ))
+        streamurl = ('%s/live?channel_id=%s&client=%s' % (self.address_without_creds, chandict["origin_id"], "fhdhr_%s" % chandict["origin_number"]))
 
         stream_info = {"url": streamurl}
 
