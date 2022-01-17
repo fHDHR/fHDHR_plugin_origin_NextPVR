@@ -58,7 +58,7 @@ class Plugin_OBJ():
         if self.sid:
             return self.sid
 
-        initiate_url = '%s/service?method=session.initiate&ver=1.0&device=fhdhr' % self.nextpvr_address
+        initiate_url = '%s/service?method=session.initiate&ver=1.0&device=fhdhr' % self.address_without_creds
 
         initiate_req = self.plugin_utils.web.session.get(initiate_url)
         initiate_dict = xmltodict.parse(initiate_req.content)
@@ -70,7 +70,7 @@ class Plugin_OBJ():
         clientKey = hashlib.md5(string.encode('utf-8')).hexdigest()
 
         login_url = ('%s/service?method=session.login&sid=%s&md5=%s' %
-                     (self.nextpvr_address, sid, clientKey))
+                     (self.address_without_creds, sid, clientKey))
         login_req = self.plugin_utils.web.session.get(login_url)
         login_dict = xmltodict.parse(login_req.content)
 
