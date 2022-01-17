@@ -25,7 +25,7 @@ Join us in `#fHDHR <irc://irc.freenode.net/#fHDHR>`_ on Freenode.
 [nextpvr]
 # address = localhost
 # port = 8866
-# addrssless = false
+# ssl = false
 # pin = none
 # sid = none
 ````
