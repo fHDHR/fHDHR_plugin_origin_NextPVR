@@ -14,14 +14,6 @@ class Plugin_OBJ():
         self.login()
 
     @property
-    def tuners(self):
-        return self.plugin_utils.config.dict["nextpvr"]["tuners"]
-
-    @property
-    def stream_method(self):
-        return self.plugin_utils.config.dict["nextpvr"]["stream_method"]
-
-    @property
     def sid(self):
         return self.plugin_utils.config.dict["nextpvr"]["sid"]
 
