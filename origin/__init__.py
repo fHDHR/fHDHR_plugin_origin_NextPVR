@@ -14,6 +14,12 @@ class Plugin_OBJ():
         self.login()
 
     @property
+    def webpage_dict(self):
+        return {
+                "Address": self.address_without_creds,
+                }
+
+    @property
     def sid(self):
         return self.plugin_utils.config.dict["nextpvr"]["sid"]
 
