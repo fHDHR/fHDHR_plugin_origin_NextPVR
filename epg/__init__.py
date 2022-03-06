@@ -28,8 +28,8 @@ class Plugin_OBJ():
     def update_epg(self):
         programguide = {}
 
-        for fhdhr_id in list(self.channels.list.keys()):
-            chan_obj = self.channels.list[fhdhr_id]
+        for fhdhr_channel_id in list(self.channels.list.keys()):
+            chan_obj = self.channels.list[fhdhr_channel_id]
 
             if str(chan_obj.number) not in list(programguide.keys()):
 
