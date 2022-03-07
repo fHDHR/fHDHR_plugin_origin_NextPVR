@@ -10,7 +10,7 @@ class Plugin_OBJ():
 
         self.channels = channels
 
-        self.origin = plugin_utils.origin
+        self.origin_name = plugin_utils.origin_name
 
     def get_content_thumbnail(self, content_id):
         item_thumb_url = ("%s%s:%s/service?method=channel.show.artwork&sid=%s&event_id=%s" %
