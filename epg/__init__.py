@@ -10,7 +10,7 @@ class Plugin_OBJ():
 
         self.channels = channels
 
-        self.origin = plugin_utils.origin
+        self.origin_name = plugin_utils.origin_name
 
     def get_content_thumbnail(self, content_id):
         item_thumb_url = ("%s%s:%s/service?method=channel.show.artwork&sid=%s&event_id=%s" %
@@ -28,8 +28,8 @@ class Plugin_OBJ():
     def update_epg(self):
         programguide = {}
 
-        for fhdhr_id in list(self.channels.list.keys()):
-            chan_obj = self.channels.list[fhdhr_id]
+        for fhdhr_channel_id in list(self.channels.list.keys()):
+            chan_obj = self.channels.list[fhdhr_channel_id]
 
             if str(chan_obj.number) not in list(programguide.keys()):
 
